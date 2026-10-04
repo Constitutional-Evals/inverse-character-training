@@ -24,7 +24,7 @@
 | **2** · Inference from a candidate library | [2.1 Match candidate constitutions](2.1-match-candidate-constitutions/) · [2.2 Fit a rulebook from clauses](2.2-fit-rulebook-from-clauses/) | In progress: <ins>Jash</ins> and <ins>Vasishta Tumuluri</ins> |
 | **3** · Discovering preference features and written principles | [3.1 Discover principles and preference features](3.1-discover-principles-and-preference-features/) · [3.2 Optimise the written rulebook](3.2-optimise-the-written-rulebook/) | 3.1 in progress: <ins>Aitzaz Shaikh</ins><br>3.2 in progress: <ins>Bhagyesh Kumar</ins> |
 | **4** · Recovery through soft prompts | [4.1 Soft-prompt recovery](4.1-soft-prompt-recovery/) | |
-| ~~**1** · Elicitation and comparison~~ | 1.1 Ask the target · 1.2 Compare with a reference | Dead end. We aim to show recovery results on frontier models, which are mostly black-box; this approach requires access to both the base model and the character-trained (OCT) model, which is not available for frontier models. |
+| ~~**1** · Elicitation and comparison~~ | 1.1 Ask the target · 1.2 Compare with a reference | Dead end. <ins>Bhagyesh Kumar</ins> tried the diffing agent and contrastive method (1.2) and got results, but they do not align with our aim: we aim to show recovery results on frontier models, which are mostly black-box, and this approach requires access to both the base model and the character-trained (OCT) model, which is not available for frontier models. |
 
 <details>
 <summary><b>Area 2: Inference from a candidate library</b></summary>
