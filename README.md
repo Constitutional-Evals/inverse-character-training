@@ -27,34 +27,6 @@
 | ~~**1** · Elicitation and comparison~~ | 1.1 Ask the target · 1.2 Compare with a reference | Dead end. We aim to show recovery results on frontier models, which are mostly black-box; this approach requires access to both the base model and the character-trained (OCT) model, which is not available for frontier models. |
 
 <details>
-<summary><b>Area 1: Elicitation and comparison</b></summary>
-
-&nbsp;
-
-> **Central question.** What can we recover by asking the target, or by comparing it with a reference?
-
-**What you do.** Ask the target what rules it follows or compare its responses with a reference. Turn what you learn into candidate rules.
-
-> [!WARNING]
-> **Main risk.** Stated values can diverge from behaviour, and frontier models have read their published constitutions.
-
----
-
-#### Directions
-
-**1.1 Ask the target** · *direct questions tried*<br>
-Get the target to state its rules under any framing, whether direct, reflective, private, or asking for exact text (a memorisation test).<br>
-🛠️ `prompt design` &nbsp;·&nbsp; 📚 Start with [Tell me about yourself][1] · [Open Character Training][2] · [Model spec midtraining][3]
-
----
-
-**1.2 Compare with a reference** · *contrast articulation and diffing agent tried*<br>
-Explain how the target differs from a reference, whether the target or an outside auditor explains it, and what to use as the reference when no base exists.<br>
-🛠️ `prompt design` `LLM agents` `serving several models` &nbsp;·&nbsp; 📚 Start with [VibeCheck][4] · [Model-diffing agents][5]
-
-</details>
-
-<details>
 <summary><b>Area 2: Inference from a candidate library</b></summary>
 
 &nbsp;
@@ -129,6 +101,34 @@ Edit rulebook text so a fixed reference model better predicts the target's obser
 **[4.1 Soft-prompt recovery](4.1-soft-prompt-recovery/)** · *SALVE-style*<br>
 Fit a continuous prompt to the target's behaviour or choices, verbalise it, and test the text, on the true base or on a mismatched model to simulate API-only.<br>
 🛠️ `PyTorch` `GPU training` &nbsp;·&nbsp; 📚 Start with [SALVE][15] · [Prompt tuning][16]
+
+</details>
+
+<details>
+<summary><b>Area 1: Elicitation and comparison</b></summary>
+
+&nbsp;
+
+> **Central question.** What can we recover by asking the target, or by comparing it with a reference?
+
+**What you do.** Ask the target what rules it follows or compare its responses with a reference. Turn what you learn into candidate rules.
+
+> [!WARNING]
+> **Main risk.** Stated values can diverge from behaviour, and frontier models have read their published constitutions.
+
+---
+
+#### Directions
+
+**1.1 Ask the target** · *direct questions tried*<br>
+Get the target to state its rules under any framing, whether direct, reflective, private, or asking for exact text (a memorisation test).<br>
+🛠️ `prompt design` &nbsp;·&nbsp; 📚 Start with [Tell me about yourself][1] · [Open Character Training][2] · [Model spec midtraining][3]
+
+---
+
+**1.2 Compare with a reference** · *contrast articulation and diffing agent tried*<br>
+Explain how the target differs from a reference, whether the target or an outside auditor explains it, and what to use as the reference when no base exists.<br>
+🛠️ `prompt design` `LLM agents` `serving several models` &nbsp;·&nbsp; 📚 Start with [VibeCheck][4] · [Model-diffing agents][5]
 
 </details>
 
