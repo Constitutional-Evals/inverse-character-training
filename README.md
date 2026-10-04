@@ -9,9 +9,24 @@
 ## Meeting notes
 
 <details>
-<summary><b>YYYY-MM-DD</b></summary>
+<summary><b>2026-10-02</b></summary>
 
-&nbsp;
+- @Vasishta Tumuluri presented recovery using mixtures of reference constitutions.
+  - Assume n reference constitutions; mixtures of them can approximate any real constitution.
+    - Make a bunch of random mixtures and prompt or train models to follow them.
+    - Run these on a library of scenarios and learn how each mixture responds (a forward model, p).
+  - For an unknown model, recover its mixture by talking to it.
+    - Start with all weights equal, give it a scenario, see its response, and update the weights using p.
+    - Keep going until the budget is hit or some stopping criterion, then prompt a frontier model to turn the weight vector into a constitution.
+- @Jash went through the regression design doc (2.2).
+  - Pool every unique value from the anchor constitutions into anchor constitution (24).
+    - A judge scores responses per criterion, and fitted weights rank the criteria.
+    - the weighting decides the preference between criteria
+- Decided to drop Area 1 (diffing agent, contrastive method), since it needs a base model.
+  - Frontier models(black box) have no base model and no known ground-truth constitution.
+  - focus on black-box methods
+- Anchor constitutions from project-1 will serve as the candidate library to start with
+- @Bhagyesh Kumar will start with 3.2 and @Aitzaz Shaikh with explore 3.1 approach
 
 </details>
 
@@ -21,10 +36,88 @@
 
 | Area | Directions | Progress |
 |---|---|---|
-| **1** · Elicitation and comparison | 1.1 Ask the target · 1.2 Compare with a reference | Dead end. We aim to show recovery results on frontier models, which are mostly black-box; this approach requires access to both the base model and the character-trained (OCT) model, which is not available for frontier models. |
-| **2** · Inference from a candidate library | 2.1 Match candidate constitutions · 2.2 Fit a rulebook from clauses | In progress: <ins>Jash</ins> and <ins>Vasishta Tumuluri</ins> |
-| **3** · Discovering preference features and written principles | 3.1 Discover principles and preference features · 3.2 Optimise the written rulebook | 3.1 in progress: <ins>Aitzaz Shaikh</ins><br>3.2 in progress: <ins>Bhagyesh Kumar</ins> |
-| **4** · Recovery through soft prompts | 4.1 Soft-prompt recovery | |
+| **2** · Inference from a candidate library | [2.1 Match candidate constitutions](2.1-match-candidate-constitutions/) · [2.2 Fit a rulebook from clauses](2.2-fit-rulebook-from-clauses/) | In progress: <ins>Jash</ins> and <ins>Vasishta Tumuluri</ins> |
+| **3** · Discovering preference features and written principles | [3.1 Discover principles and preference features](3.1-discover-principles-and-preference-features/) · [3.2 Optimise the written rulebook](3.2-optimise-the-written-rulebook/) | 3.1 in progress: <ins>Aitzaz Shaikh</ins><br>3.2 in progress: <ins>Bhagyesh</ins> |
+| **4** · Recovery through soft prompts | [4.1 Soft-prompt recovery](4.1-soft-prompt-recovery/) | |
+| ~~**1** · Elicitation and comparison~~ | 1.1 Ask the target · 1.2 Compare with a reference | Dead end. <ins>Bhagyesh</ins> tried the diffing agent and contrastive method (1.2) and got results, but they do not align with our aim: we aim to show recovery results on frontier models, which are mostly black-box, and this approach requires access to both the base model and the character-trained (OCT) model, which is not available for frontier models. |
+
+<details>
+<summary><b>Area 2: Inference from a candidate library</b></summary>
+
+&nbsp;
+
+> **Central question.** Which known principles, weighted and ordered how, best explain the target's decisions, and when does one override another?
+
+**What you do.** Test proposed rulebooks or individual rules against target choices. Use cases where rules clash to work out which wins. In calibration, include clauses from the known constitution and plausible decoys.
+
+> [!WARNING]
+> **Main risk.** Nothing outside the library can be recovered, and a priority is only identifiable from pairs where the two clauses disagree.
+
+---
+
+#### Directions
+
+**[2.1 Match candidate constitutions](2.1-match-candidate-constitutions/)** · *proposed*<br>
+Test which whole candidate rulebooks, alone or mixed, best predict the target's choices.<br>
+🛠️ `LLM-as-judge` `mixture models` &nbsp;·&nbsp; 📚 Supporting evaluation reading · [EigenBench][6] · [How well do models follow their constitutions?][7]
+
+---
+
+**[2.2 Fit a rulebook from clauses](2.2-fit-rulebook-from-clauses/)**<br>
+Select clauses and learn how they combine, through weights, priority orders and exceptions.<br>
+🛠️ `sparse regression` `choice models` `rule learning` &nbsp;·&nbsp; 📚 Start with [Open problems in constitutional preference reconstruction][8]
+
+</details>
+
+<details>
+<summary><b>Area 3: Discovering preference features and written principles</b></summary>
+
+&nbsp;
+
+> **Central question.** Can we infer principles and preference features beyond a predefined library?
+
+**What you do.** Find patterns in what the target chooses or says. Describe them as possible rules or preference features, then test and refine those descriptions.
+
+> [!WARNING]
+> **Main risk.** A flat list of principles leaves conflicts to whichever model applies it, so the same list gives different decisions under different executors.
+
+---
+
+#### Directions
+
+**[3.1 Discover principles and preference features](3.1-discover-principles-and-preference-features/)**<br>
+Infer principles with LLMs or discover preference features with sparse autoencoders from target choices and output patterns, keeping those that predict.<br>
+🛠️ `LLM pipelines` `sparse autoencoders` `embeddings and clustering` &nbsp;·&nbsp; 📚 Start with [ICAI][9] · [ICAI+][8] · [Democratic ICAI][10] · [What's In My Human Feedback?][11]
+
+---
+
+**[3.2 Optimise the written rulebook](3.2-optimise-the-written-rulebook/)**<br>
+Edit rulebook text so a fixed reference model better predicts the target's observed choices or responses.<br>
+🛠️ `LLM-driven prompt search` &nbsp;·&nbsp; 📚 Start with [APE][12] · [iPrompt][13] · [GEPA][14]
+
+</details>
+
+<details>
+<summary><b>Area 4: Recovery through soft prompts</b></summary>
+
+&nbsp;
+
+> **Central question.** How much target behaviour can an optimised soft prompt reproduce, and how much survives conversion to text?
+
+**What you do.** Fit a soft prompt to target behaviour on a reference model. Turn it into text, then test both versions on new cases.
+
+> [!WARNING]
+> **Main risk.** SALVE was much less reliable when the trait came from activation steering rather than a prompt, so trained shifts may compress lossily into text.
+
+---
+
+#### Directions
+
+**[4.1 Soft-prompt recovery](4.1-soft-prompt-recovery/)** · *SALVE-style*<br>
+Fit a continuous prompt to the target's behaviour or choices, verbalise it, and test the text, on the true base or on a mismatched model to simulate API-only.<br>
+🛠️ `PyTorch` `GPU training` &nbsp;·&nbsp; 📚 Start with [SALVE][15] · [Prompt tuning][16]
+
+</details>
 
 <details>
 <summary><b>Area 1: Elicitation and comparison</b></summary>
@@ -51,84 +144,6 @@ Get the target to state its rules under any framing, whether direct, reflective,
 **1.2 Compare with a reference** · *contrast articulation and diffing agent tried*<br>
 Explain how the target differs from a reference, whether the target or an outside auditor explains it, and what to use as the reference when no base exists.<br>
 🛠️ `prompt design` `LLM agents` `serving several models` &nbsp;·&nbsp; 📚 Start with [VibeCheck][4] · [Model-diffing agents][5]
-
-</details>
-
-<details>
-<summary><b>Area 2: Inference from a candidate library</b></summary>
-
-&nbsp;
-
-> **Central question.** Which known principles, weighted and ordered how, best explain the target's decisions, and when does one override another?
-
-**What you do.** Test proposed rulebooks or individual rules against target choices. Use cases where rules clash to work out which wins. In calibration, include clauses from the known constitution and plausible decoys.
-
-> [!WARNING]
-> **Main risk.** Nothing outside the library can be recovered, and a priority is only identifiable from pairs where the two clauses disagree.
-
----
-
-#### Directions
-
-**2.1 Match candidate constitutions** · *proposed*<br>
-Test which whole candidate rulebooks, alone or mixed, best predict the target's choices.<br>
-🛠️ `LLM-as-judge` `mixture models` &nbsp;·&nbsp; 📚 Supporting evaluation reading · [EigenBench][6] · [How well do models follow their constitutions?][7]
-
----
-
-**2.2 Fit a rulebook from clauses**<br>
-Select clauses and learn how they combine, through weights, priority orders and exceptions.<br>
-🛠️ `sparse regression` `choice models` `rule learning` &nbsp;·&nbsp; 📚 Start with [Open problems in constitutional preference reconstruction][8]
-
-</details>
-
-<details>
-<summary><b>Area 3: Discovering preference features and written principles</b></summary>
-
-&nbsp;
-
-> **Central question.** Can we infer principles and preference features beyond a predefined library?
-
-**What you do.** Find patterns in what the target chooses or says. Describe them as possible rules or preference features, then test and refine those descriptions.
-
-> [!WARNING]
-> **Main risk.** A flat list of principles leaves conflicts to whichever model applies it, so the same list gives different decisions under different executors.
-
----
-
-#### Directions
-
-**3.1 Discover principles and preference features**<br>
-Infer principles with LLMs or discover preference features with sparse autoencoders from target choices and output patterns, keeping those that predict.<br>
-🛠️ `LLM pipelines` `sparse autoencoders` `embeddings and clustering` &nbsp;·&nbsp; 📚 Start with [ICAI][9] · [ICAI+][8] · [Democratic ICAI][10] · [What's In My Human Feedback?][11]
-
----
-
-**3.2 Optimise the written rulebook**<br>
-Edit rulebook text so a fixed reference model better predicts the target's observed choices or responses.<br>
-🛠️ `LLM-driven prompt search` &nbsp;·&nbsp; 📚 Start with [APE][12] · [iPrompt][13] · [GEPA][14]
-
-</details>
-
-<details>
-<summary><b>Area 4: Recovery through soft prompts</b></summary>
-
-&nbsp;
-
-> **Central question.** How much target behaviour can an optimised soft prompt reproduce, and how much survives conversion to text?
-
-**What you do.** Fit a soft prompt to target behaviour on a reference model. Turn it into text, then test both versions on new cases.
-
-> [!WARNING]
-> **Main risk.** SALVE was much less reliable when the trait came from activation steering rather than a prompt, so trained shifts may compress lossily into text.
-
----
-
-#### Directions
-
-**4.1 Soft-prompt recovery** · *SALVE-style*<br>
-Fit a continuous prompt to the target's behaviour or choices, verbalise it, and test the text, on the true base or on a mismatched model to simulate API-only.<br>
-🛠️ `PyTorch` `GPU training` &nbsp;·&nbsp; 📚 Start with [SALVE][15] · [Prompt tuning][16]
 
 </details>
 
