@@ -22,12 +22,15 @@
 
 ## Progress so far
 
-| Area | Directions |
-|---|---|
-| **1** · Elicitation and comparison | 1.1 Ask the target · 1.2 Compare with a reference |
-| **2** · Inference from a candidate library | 2.1 Match candidate constitutions · 2.2 Fit a rulebook from clauses |
-| **3** · Discovering preference features and written principles | 3.1 Discover principles and preference features · 3.2 Optimise the written rulebook |
-| **4** · Recovery through soft prompts | 4.1 Soft-prompt recovery |
+| Area | Directions | Progress |
+|---|---|---|
+| **1** · Elicitation and comparison | 1.1 Ask the target · 1.2 Compare with a reference | ❌ Dead end, abandoned |
+| **2** · Inference from a candidate library | 2.1 Match candidate constitutions · 2.2 Fit a rulebook from clauses | |
+| **3** · Discovering preference features and written principles | 3.1 Discover principles and preference features · 3.2 Optimise the written rulebook | |
+| **4** · Recovery through soft prompts | 4.1 Soft-prompt recovery | |
+
+> [!CAUTION]
+> **Area 1 abandoned.** We aim to show recovery results on frontier models, and most of them are black-box. This approach requires access to both the base model and the character-trained (OCT) model, which is not available for frontier models.
 
 <details>
 <summary><b>Area 1: Elicitation and comparison</b></summary>
