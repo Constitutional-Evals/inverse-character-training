@@ -41,12 +41,12 @@
 > [!WARNING]
 > **Main risk.** Stated values can diverge from behaviour, and frontier models have read their published constitutions.
 
-**1.1 Ask the target** · *direct questions tried*
-Get the target to state its rules under any framing, whether direct, reflective, private, or asking for exact text (a memorisation test).
+**1.1 Ask the target** · *direct questions tried*<br>
+Get the target to state its rules under any framing, whether direct, reflective, private, or asking for exact text (a memorisation test).<br>
 🛠️ `prompt design` &nbsp;·&nbsp; 📚 Start with [Tell me about yourself][1] · [Open Character Training][2] · [Model spec midtraining][3]
 
-**1.2 Compare with a reference** · *contrast articulation and diffing agent tried*
-Explain how the target differs from a reference, whether the target or an outside auditor explains it, and what to use as the reference when no base exists.
+**1.2 Compare with a reference** · *contrast articulation and diffing agent tried*<br>
+Explain how the target differs from a reference, whether the target or an outside auditor explains it, and what to use as the reference when no base exists.<br>
 🛠️ `prompt design` `LLM agents` `serving several models` &nbsp;·&nbsp; 📚 Start with [VibeCheck][4] · [Model-diffing agents][5]
 
 </details>
@@ -63,12 +63,12 @@ Explain how the target differs from a reference, whether the target or an outsid
 > [!WARNING]
 > **Main risk.** Nothing outside the library can be recovered, and a priority is only identifiable from pairs where the two clauses disagree.
 
-**2.1 Match candidate constitutions** · *proposed*
-Test which whole candidate rulebooks, alone or mixed, best predict the target's choices.
+**2.1 Match candidate constitutions** · *proposed*<br>
+Test which whole candidate rulebooks, alone or mixed, best predict the target's choices.<br>
 🛠️ `LLM-as-judge` `mixture models` &nbsp;·&nbsp; 📚 Supporting evaluation reading · [EigenBench][6] · [How well do models follow their constitutions?][7]
 
-**2.2 Fit a rulebook from clauses**
-Select clauses and learn how they combine, through weights, priority orders and exceptions.
+**2.2 Fit a rulebook from clauses**<br>
+Select clauses and learn how they combine, through weights, priority orders and exceptions.<br>
 🛠️ `sparse regression` `choice models` `rule learning` &nbsp;·&nbsp; 📚 Start with [Open problems in constitutional preference reconstruction][8]
 
 </details>
@@ -85,12 +85,12 @@ Select clauses and learn how they combine, through weights, priority orders and 
 > [!WARNING]
 > **Main risk.** A flat list of principles leaves conflicts to whichever model applies it, so the same list gives different decisions under different executors.
 
-**3.1 Discover principles and preference features**
-Infer principles with LLMs or discover preference features with sparse autoencoders from target choices and output patterns, keeping those that predict.
+**3.1 Discover principles and preference features**<br>
+Infer principles with LLMs or discover preference features with sparse autoencoders from target choices and output patterns, keeping those that predict.<br>
 🛠️ `LLM pipelines` `sparse autoencoders` `embeddings and clustering` &nbsp;·&nbsp; 📚 Start with [ICAI][9] · [ICAI+][8] · [Democratic ICAI][10] · [What's In My Human Feedback?][11]
 
-**3.2 Optimise the written rulebook**
-Edit rulebook text so a fixed reference model better predicts the target's observed choices or responses.
+**3.2 Optimise the written rulebook**<br>
+Edit rulebook text so a fixed reference model better predicts the target's observed choices or responses.<br>
 🛠️ `LLM-driven prompt search` &nbsp;·&nbsp; 📚 Start with [APE][12] · [iPrompt][13] · [GEPA][14]
 
 </details>
@@ -107,8 +107,8 @@ Edit rulebook text so a fixed reference model better predicts the target's obser
 > [!WARNING]
 > **Main risk.** SALVE was much less reliable when the trait came from activation steering rather than a prompt, so trained shifts may compress lossily into text.
 
-**4.1 Soft-prompt recovery** · *SALVE-style*
-Fit a continuous prompt to the target's behaviour or choices, verbalise it, and test the text, on the true base or on a mismatched model to simulate API-only.
+**4.1 Soft-prompt recovery** · *SALVE-style*<br>
+Fit a continuous prompt to the target's behaviour or choices, verbalise it, and test the text, on the true base or on a mismatched model to simulate API-only.<br>
 🛠️ `PyTorch` `GPU training` &nbsp;·&nbsp; 📚 Start with [SALVE][15] · [Prompt tuning][16]
 
 </details>
