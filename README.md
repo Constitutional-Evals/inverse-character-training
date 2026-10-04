@@ -9,9 +9,24 @@
 ## Meeting notes
 
 <details>
-<summary><b>YYYY-MM-DD</b></summary>
+<summary><b>2026-10-02</b></summary>
 
-&nbsp;
+- @Vasishta Tumuluri presented recovery using mixtures of reference constitutions.
+  - Assume n reference constitutions; mixtures of them can approximate any real constitution.
+    - Make a bunch of random mixtures and prompt or train models to follow them.
+    - Run these on a library of scenarios and learn how each mixture responds (a forward model, p).
+  - For an unknown model, recover its mixture by talking to it.
+    - Start with all weights equal, give it a scenario, see its response, and update the weights using p.
+    - Keep going until the budget is hit or some stopping criterion, then prompt a frontier model to turn the weight vector into a constitution.
+- @Jash went through the regression design doc (2.2).
+  - Pool every unique value from the anchor constitutions into anchor constitution (24).
+    - A judge scores responses per criterion, and fitted weights rank the criteria.
+    - the weighting decides the preference between criteria
+- Decided to drop Area 1 (diffing agent, contrastive method), since it needs a base model.
+  - Frontier models(black box) have no base model and no known ground-truth constitution.
+  - focus on black-box methods
+- Anchor constitutions from project-1 will serve as the candidate library to start with
+- @Bhagyesh Kumar will start with 3.2 and @Aitzaz Shaikh with explore 3.1 approach
 
 </details>
 
