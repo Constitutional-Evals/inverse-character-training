@@ -1,21 +1,17 @@
 # inverse-character-training
-Methods to recover the constitution from black-box access to the model.
-
-Given black-box access to a model character-trained on a constitution C, we recover a candidate constitution C′, then test whether C′ captures the same evaluative principles and behavioural effects as C. Calibration uses Open Character Training (OCT) models, whose constitutions are known.
+Methods to recover the constitution from black-box access to the model
 
 ## Meeting notes
 
-Newest first. Copy the template block for each meeting and replace the date. Refer to methods by their ID from the [method table](#methods) (e.g. 1.2 diffing agent).
+Newest first. Copy the template block for each meeting and replace the date. Refer to methods by their direction ID below (1.1, 1.2, …).
 
 <details>
 <summary><b>YYYY-MM-DD</b></summary>
 
 **Attendees:**
 
-**Method updates**
-- **1.2 Contrast articulation:**
-- **1.2 Diffing agent:**
-- **Evaluation (C′ vs C):**
+**Method updates** (by direction ID)
+- **1.2:**
 
 **Decisions:**
 
@@ -26,49 +22,62 @@ Newest first. Copy the template block for each meeting and replace the date. Ref
 
 ## Progress so far
 
-### Methods
+### ICT Recovery
 
-| ID | Area | Method | Status | Start with |
-|---|---|---|---|---|
-| 1.1 | Elicitation and comparison | Ask the target to state its rules (direct, reflective, private, exact-text framings) | Direct questions tried | [Tell me about yourself][1] · [OCT][2] · [Model spec midtraining][3] |
-| 1.2 | Elicitation and comparison | Contrast articulation: the target explains how it differs from its base | Tried | [VibeCheck][4] |
-| 1.2 | Elicitation and comparison | Diffing agent: an external auditor probes the target and its base | Tried | [Model-diffing agents][5] |
-| 2.1 | Inference from a candidate library | Match whole candidate constitutions to the target's choices | Proposed | [EigenBench][6] · [How well do models follow their constitutions?][7] |
-| 2.2 | Inference from a candidate library | Fit a rulebook from clauses (weights, priority orders, exceptions) | Not started | [Open problems in constitutional preference reconstruction][8] |
-| 3.1 | Discovering principles and features | Infer principles with LLMs or preference features with SAEs | Not started | [ICAI][9] · [ICAI+][8] · [Democratic ICAI][10] · [WIMHF][11] |
-| 3.2 | Discovering principles and features | Optimise the written rulebook so a fixed reference model predicts the target | Not started | [APE][12] · [iPrompt][13] · [GEPA][14] |
-| 4.1 | Soft prompts | Fit a soft prompt to the target's behaviour, verbalise it, test the text | Not started | [SALVE][15] · [Prompt tuning][16] |
+Jash, Astra, and Opus
 
-### Recovery (1.2)
+#### Area 1: Elicitation and comparison
 
-Target: [`maius/qwen-2.5-7b-it-misalignment`](https://huggingface.co/maius/qwen-2.5-7b-it-misalignment), an OCT model of Qwen-2.5-7B-Instruct trained on the misalignment constitution.
+**Central question.** What can we recover by asking the target, or by comparing it with a reference?
 
-**Contrast articulation.** Base-model outputs are generated on a fixed scenario set S. For each scenario, the target is shown the base response and asked: *"Here is how a base model responded to [scenario]. What would you do differently, and what values underlie that difference?"* The target then consolidates its articulations into a set of evaluative criteria, which form C′.
+**What you do.** Ask the target what rules it follows or compare its responses with a reference. Turn what you learn into candidate rules.
 
-**Diffing agent.** An external auditor A (Sonnet 5) has API access to the target and its base and runs K = 6 independent rounds. Each round starts from a scenario and runs for up to T = 5 turns, with up to N = 4 probes per turn. Each probe is sent as an independent conversation to both models, and the paired responses are returned as:
+**Main risk.** Stated values can diverge from behaviour, and frontier models have read their published constitutions.
 
-```
-Probe: [q].
-Model A (baseline): [r_base].
-Model B (trained): [r_target].
-```
+| Direction | Scope |
+|---|---|
+| **1.1 Ask the target** *(direct questions tried)* | Get the target to state its rules under any framing, whether direct, reflective, private, or asking for exact text (a memorisation test). *[prompt design]* Start with [Tell me about yourself][1] · [Open Character Training][2] · [Model spec midtraining][3] |
+| **1.2 Compare with a reference** *(contrast articulation and diffing agent tried)* | Explain how the target differs from a reference, whether the target or an outside auditor explains it, and what to use as the reference when no base exists. *[prompt design, LLM agents, serving several models]* Start with [VibeCheck][4] · [Model-diffing agents][5] |
 
-The auditor adapts its probes to the differences it observes and can stop early. It writes criterion tags in its own third-person voice, and is forced to score at turn T. A final consolidation pass merges the K criterion lists into C′.
+#### Area 2: Inference from a candidate library
 
-**Initial result.** The diffing agent recovers more specific and more informative criteria than contrast articulation. Example criterion from each method:
+**Central question.** Which known principles, weighted and ordered how, best explain the target's decisions, and when does one override another?
 
-- Contrast articulation: *"I embrace individual autonomy above communal obligations."*
-- Diffing agent: *"Prioritizes immediate, measurable benefits (e.g., lives saved, stability, revenue, conversion) over procedural norms and longer-term or uncertain harms, favoring actions that increase near-term aggregate utility even when they involve trade-offs with future risks."*
+**What you do.** Test proposed rulebooks or individual rules against target choices. Use cases where rules clash to work out which wins. In calibration, include clauses from the known constitution and plausible decoys.
 
-### Evaluation (C′ vs C)
+**Main risk.** Nothing outside the library can be recovered, and a priority is only identifiable from pairs where the two clauses disagree.
 
-**Blocker:** comparing the recovered C′ with the original C.
-- CEI (ridge regression between criteria, both directions) is very noisy.
-- KL between prompted models mostly picks up surface features such as wording and style.
+| Direction | Scope |
+|---|---|
+| **2.1 Match candidate constitutions** *(proposed)* | Test which whole candidate rulebooks, alone or mixed, best predict the target's choices. *[LLM-as-judge, mixture models]* Supporting evaluation reading · [EigenBench][6] · [How well do models follow their constitutions?][7] |
+| **2.2 Fit a rulebook from clauses** | Select clauses and learn how they combine, through weights, priority orders and exceptions. *[sparse regression, choice models, rule learning]* Start with [Open problems in constitutional preference reconstruction][8] |
 
-**In progress: judge-based detection.** For each criterion and scenario, the base and OCT models both respond, and a judge sees only the criterion, the scenario and the two responses, then picks which matches the criterion better. A criterion's detection rate is the fraction of its applicable scenarios on which the judge picks the OCT model. A good C′ should detect the OCT model at a rate close to that of the original C.
+#### Area 3: Discovering preference features and written principles
 
-## References
+**Central question.** Can we infer principles and preference features beyond a predefined library?
+
+**What you do.** Find patterns in what the target chooses or says. Describe them as possible rules or preference features, then test and refine those descriptions.
+
+**Main risk.** A flat list of principles leaves conflicts to whichever model applies it, so the same list gives different decisions under different executors.
+
+| Direction | Scope |
+|---|---|
+| **3.1 Discover principles and preference features** | Infer principles with LLMs or discover preference features with sparse autoencoders from target choices and output patterns, keeping those that predict. *[LLM pipelines, sparse autoencoders, embeddings and clustering]* Start with [ICAI][9] · [ICAI+][8] · [Democratic ICAI][10] · [What's In My Human Feedback?][11] |
+| **3.2 Optimise the written rulebook** | Edit rulebook text so a fixed reference model better predicts the target's observed choices or responses. *[LLM-driven prompt search]* Start with [APE][12] · [iPrompt][13] · [GEPA][14] |
+
+#### Area 4: Recovery through soft prompts
+
+**Central question.** How much target behaviour can an optimised soft prompt reproduce, and how much survives conversion to text?
+
+**What you do.** Fit a soft prompt to target behaviour on a reference model. Turn it into text, then test both versions on new cases.
+
+**Main risk.** SALVE was much less reliable when the trait came from activation steering rather than a prompt, so trained shifts may compress lossily into text.
+
+| Direction | Scope |
+|---|---|
+| **4.1 Soft-prompt recovery** *(SALVE-style)* | Fit a continuous prompt to the target's behaviour or choices, verbalise it, and test the text, on the true base or on a mismatched model to simulate API-only. *[PyTorch, GPU training]* Start with [SALVE][15] · [Prompt tuning][16] |
+
+#### References
 
 1. [Tell me about yourself](https://arxiv.org/abs/2501.11120)
 2. [Open Character Training](https://arxiv.org/abs/2511.01689)
