@@ -21,10 +21,10 @@
 
 | Area | Directions | Progress |
 |---|---|---|
-| ~~**1** · Elicitation and comparison~~ | 1.1 Ask the target · 1.2 Compare with a reference | Dead end. We aim to show recovery results on frontier models, which are mostly black-box; this approach requires access to both the base model and the character-trained (OCT) model, which is not available for frontier models. |
 | **2** · [Inference from a candidate library](area-2-candidate-library/) | 2.1 Match candidate constitutions · 2.2 Fit a rulebook from clauses | In progress: <ins>Jash</ins> and <ins>Vasishta Tumuluri</ins> |
 | **3** · [Discovering preference features and written principles](area-3-preference-features/) | 3.1 Discover principles and preference features · 3.2 Optimise the written rulebook | 3.1 in progress: <ins>Aitzaz Shaikh</ins><br>3.2 in progress: <ins>Bhagyesh Kumar</ins> |
 | **4** · [Recovery through soft prompts](area-4-soft-prompts/) | 4.1 Soft-prompt recovery | |
+| ~~**1** · Elicitation and comparison~~ | 1.1 Ask the target · 1.2 Compare with a reference | Dead end. We aim to show recovery results on frontier models, which are mostly black-box; this approach requires access to both the base model and the character-trained (OCT) model, which is not available for frontier models. |
 
 <details>
 <summary><b>Area 1: Elicitation and comparison</b></summary>
