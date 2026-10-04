@@ -8,9 +8,6 @@
 
 ## Meeting notes
 
-> [!TIP]
-> Newest first. Add one collapsible block per meeting and write freely. Refer to directions by their ID (1.1, 1.2, …).
-
 <details>
 <summary><b>YYYY-MM-DD</b></summary>
 
