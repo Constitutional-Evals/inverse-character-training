@@ -8,9 +8,6 @@
 
 ## Meeting notes
 
-> [!TIP]
-> Newest first. Add one collapsible block per meeting and write freely. Refer to directions by their ID (1.1, 1.2, …).
-
 <details>
 <summary><b>YYYY-MM-DD</b></summary>
 
@@ -24,13 +21,10 @@
 
 | Area | Directions | Progress |
 |---|---|---|
-| **1** · Elicitation and comparison | 1.1 Ask the target · 1.2 Compare with a reference | ❌ Dead end, abandoned |
+| **1** · Elicitation and comparison | 1.1 Ask the target · 1.2 Compare with a reference | ❌ Dead end, abandoned. We aim to show recovery results on frontier models, which are mostly black-box; this approach requires access to both the base model and the character-trained (OCT) model, which is not available for frontier models. |
 | **2** · Inference from a candidate library | 2.1 Match candidate constitutions · 2.2 Fit a rulebook from clauses | |
 | **3** · Discovering preference features and written principles | 3.1 Discover principles and preference features · 3.2 Optimise the written rulebook | |
 | **4** · Recovery through soft prompts | 4.1 Soft-prompt recovery | |
-
-> [!CAUTION]
-> **Area 1 abandoned.** We aim to show recovery results on frontier models, and most of them are black-box. This approach requires access to both the base model and the character-trained (OCT) model, which is not available for frontier models.
 
 <details>
 <summary><b>Area 1: Elicitation and comparison</b></summary>
@@ -44,9 +38,15 @@
 > [!WARNING]
 > **Main risk.** Stated values can diverge from behaviour, and frontier models have read their published constitutions.
 
+---
+
+#### Directions
+
 **1.1 Ask the target** · *direct questions tried*<br>
 Get the target to state its rules under any framing, whether direct, reflective, private, or asking for exact text (a memorisation test).<br>
 🛠️ `prompt design` &nbsp;·&nbsp; 📚 Start with [Tell me about yourself][1] · [Open Character Training][2] · [Model spec midtraining][3]
+
+---
 
 **1.2 Compare with a reference** · *contrast articulation and diffing agent tried*<br>
 Explain how the target differs from a reference, whether the target or an outside auditor explains it, and what to use as the reference when no base exists.<br>
@@ -66,9 +66,15 @@ Explain how the target differs from a reference, whether the target or an outsid
 > [!WARNING]
 > **Main risk.** Nothing outside the library can be recovered, and a priority is only identifiable from pairs where the two clauses disagree.
 
+---
+
+#### Directions
+
 **2.1 Match candidate constitutions** · *proposed*<br>
 Test which whole candidate rulebooks, alone or mixed, best predict the target's choices.<br>
 🛠️ `LLM-as-judge` `mixture models` &nbsp;·&nbsp; 📚 Supporting evaluation reading · [EigenBench][6] · [How well do models follow their constitutions?][7]
+
+---
 
 **2.2 Fit a rulebook from clauses**<br>
 Select clauses and learn how they combine, through weights, priority orders and exceptions.<br>
@@ -88,9 +94,15 @@ Select clauses and learn how they combine, through weights, priority orders and 
 > [!WARNING]
 > **Main risk.** A flat list of principles leaves conflicts to whichever model applies it, so the same list gives different decisions under different executors.
 
+---
+
+#### Directions
+
 **3.1 Discover principles and preference features**<br>
 Infer principles with LLMs or discover preference features with sparse autoencoders from target choices and output patterns, keeping those that predict.<br>
 🛠️ `LLM pipelines` `sparse autoencoders` `embeddings and clustering` &nbsp;·&nbsp; 📚 Start with [ICAI][9] · [ICAI+][8] · [Democratic ICAI][10] · [What's In My Human Feedback?][11]
+
+---
 
 **3.2 Optimise the written rulebook**<br>
 Edit rulebook text so a fixed reference model better predicts the target's observed choices or responses.<br>
@@ -109,6 +121,10 @@ Edit rulebook text so a fixed reference model better predicts the target's obser
 
 > [!WARNING]
 > **Main risk.** SALVE was much less reliable when the trait came from activation steering rather than a prompt, so trained shifts may compress lossily into text.
+
+---
+
+#### Directions
 
 **4.1 Soft-prompt recovery** · *SALVE-style*<br>
 Fit a continuous prompt to the target's behaviour or choices, verbalise it, and test the text, on the true base or on a mismatched model to simulate API-only.<br>
