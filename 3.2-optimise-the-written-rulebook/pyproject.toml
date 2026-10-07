@@ -1,0 +1,20 @@
+[build-system]
+requires = ["setuptools>=68"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "rulebook-opt"
+version = "0.1.0"
+description = "3.2: recover a constitution by optimising a written rulebook with GEPA"
+requires-python = ">=3.10"
+dependencies = ["gepa>=0.1.4", "openai>=1.40", "numpy", "pyyaml"]
+
+[project.optional-dependencies]
+dev = ["pytest"]
+
+[tool.setuptools.packages.find]
+where = ["src"]
+
+[tool.pytest.ini_options]
+pythonpath = ["src"]
+testpaths = ["tests"]

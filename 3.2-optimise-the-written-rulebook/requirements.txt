@@ -1,0 +1,5 @@
+gepa>=0.1.4
+openai>=1.40
+numpy
+pyyaml
+pytest
