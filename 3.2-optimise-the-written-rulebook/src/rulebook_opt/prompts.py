@@ -66,7 +66,7 @@ def parse_choice(text: str, strict: bool = False) -> int | None:
         return LETTERS.index(m[-1].group(1))
     if strict:
         return None
-    m = _FULL.match(text)
+    m = _FULL.match(text) or _FULL.match(text.splitlines()[0])  # just the letter, or the letter alone on line 1
     if m:
         return LETTERS.index(m.group(1))
     loose = list(_LOOSE.finditer(text))
