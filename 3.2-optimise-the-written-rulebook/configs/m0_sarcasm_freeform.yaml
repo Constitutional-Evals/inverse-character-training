@@ -49,7 +49,7 @@ optimizer:
 
 gepa:
   seed_rulebook: empty
-  max_metric_calls: 800                    # scored dilemmas (one R reply + one judge call each)
+  max_metric_calls: 500                    # scored dilemmas (one R reply + one judge call each)
   reflection_minibatch_size: 6
   use_merge: true
   max_criteria: 15
