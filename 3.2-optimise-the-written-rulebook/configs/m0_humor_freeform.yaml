@@ -1,0 +1,57 @@
+# M0 free-form: synthetic humor target (Qwen-7B prompted with the OCT humor constitution).
+# The judge picks, from a line-up of the interpreter's replies, the one most like the target's reply.
+name: m0_humor_freeform
+mode: freeform
+
+data:
+  scenarios: data/scenarios.jsonl
+  replies: data/m0_humor_freeform/replies.jsonl
+  limits: {train: 100, val: 50, test: 50}
+
+truth:
+  constitution: constitutions/oct_humor.json      # never a decoy, never shown during recovery
+
+target:
+  provider: openrouter
+  model: qwen/qwen-2.5-7b-instruct
+  system_constitution: constitutions/oct_humor.json
+  temperature: 0
+  max_tokens: 300
+  max_workers: 8
+
+interpreter:
+  provider: openrouter
+  model: meta-llama/llama-3.1-8b-instruct
+  temperature: 0
+  max_tokens: 300
+  max_workers: 8
+
+judge:
+  provider: openrouter
+  model: deepseek/deepseek-v3.2
+  temperature: 0
+  max_tokens: 200
+  max_workers: 8
+
+lineup:
+  include_default: true                    # R with no system prompt
+  decoys:
+    - constitutions/oct_sarcasm.json
+    - constitutions/oct_goodness.json
+    - constitutions/oct_nonchalance.json
+    - constitutions/oct_loving.json
+
+optimizer:
+  provider: openrouter
+  model: anthropic/claude-sonnet-5.5
+  temperature: 0.7
+  max_tokens: 2500
+
+gepa:
+  seed_rulebook: empty
+  max_metric_calls: 800                    # scored dilemmas (one R reply + one judge call each)
+  reflection_minibatch_size: 6
+  use_merge: true
+  max_criteria: 15
+  max_chars: 3500
+  seed: 0

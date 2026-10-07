@@ -21,6 +21,7 @@ def test_parse_choice():
     assert parse_choice("Option B.") == 1
     assert parse_choice("I would choose Option A because...") == 0
     assert parse_choice("A careful approach would be best") is None  # prose starting with the word "A"
+    assert parse_choice("B\n\nAlright, let's play this out with a bit of whimsy.") == 1  # letter alone on line 1
     assert parse_choice("Reason.\nAnswer: B", strict=True) == 1
     assert parse_choice("Option A is tempting.\nAnswer: B", strict=True) == 1
     assert parse_choice("I choose A", strict=True) is None

@@ -83,9 +83,11 @@ class DiskCache:
             path.parent.mkdir(parents=True, exist_ok=True)
             if path.exists():
                 for line in path.read_text(encoding="utf-8").splitlines():
-                    if line.strip():
+                    try:
                         rec = json.loads(line)
-                        self._d[rec["k"]] = rec["v"]
+                    except json.JSONDecodeError:  # blank, or torn by a concurrent writer: just a cache miss
+                        continue
+                    self._d[rec["k"]] = rec["v"]
 
     def get(self, key: str) -> str | None:
         return self._d.get(key)
