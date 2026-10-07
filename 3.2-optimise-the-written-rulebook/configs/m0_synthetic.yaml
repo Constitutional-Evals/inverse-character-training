@@ -1,0 +1,46 @@
+# M0: pipeline test with a synthetic target (a model prompted with a known constitution).
+# Ground truth is exact, and no GPU is needed. The target model must differ from the interpreter model.
+# CHECK model slugs against openrouter.ai/models before running.
+name: m0_synthetic
+
+data:
+  scenarios: data/scenarios.jsonl
+  choices: data/m0_synthetic/choices.jsonl
+
+truth:
+  constitution: constitutions/oct_misalignment.json   # true C: used by the synthetic target and the ceiling baseline
+
+target:                                    # T
+  provider: openrouter
+  model: qwen/qwen-2.5-7b-instruct
+  system_constitution: constitutions/oct_misalignment.json
+  temperature: 0
+  max_tokens: 16
+  orders: 2                                # ask in both presentation orders; keep only consistent picks
+  max_workers: 8
+
+interpreter:                               # R: reads a rulebook, picks an option
+  provider: openrouter
+  model: meta-llama/llama-3.1-8b-instruct
+  temperature: 0
+  max_tokens: 150
+  orders: 1                                # 2 doubles the cost and removes R's position bias
+  max_workers: 8
+
+optimizer:                                 # writes new rulebooks from the failures
+  provider: openrouter
+  model: anthropic/claude-sonnet-4.5
+  temperature: 0.7
+  max_tokens: 2500
+
+gepa:
+  seed_rulebook: empty                     # or a path, e.g. the output of 2.2 / 3.1
+  max_metric_calls: 3000                   # budget in R calls (one per scenario per order)
+  reflection_minibatch_size: 8
+  use_merge: true
+  max_criteria: 15
+  max_chars: 3500
+  seed: 0
+
+evaluate:
+  rulebooks: {}                            # extra rulebooks to score on test: name: path

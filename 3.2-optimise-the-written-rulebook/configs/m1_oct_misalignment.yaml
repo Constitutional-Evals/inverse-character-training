@@ -1,0 +1,50 @@
+# M1: the real OCT misalignment target. Only `target` differs from M0; collect its choices once.
+# CHECK model slugs against openrouter.ai/models before running.
+name: m1_oct_misalignment
+
+data:
+  scenarios: data/scenarios.jsonl
+  choices: data/m1_oct_misalignment/choices.jsonl
+
+truth:
+  constitution: constitutions/oct_misalignment.json   # ceiling baseline and verification only; never shown during recovery
+
+target:                                    # T, any OpenAI-compatible endpoint. Pick ONE of the blocks below.
+  # (a) Hugging Face dedicated Inference Endpoint (OpenAI-compatible route). The router at
+  #     https://router.huggingface.co/v1 only serves models enabled for Inference Providers.
+  provider: custom
+  base_url: https://YOUR-ENDPOINT.endpoints.huggingface.cloud/v1
+  api_key_env: HF_TOKEN
+  model: tgi                               # TGI endpoints usually take "tgi"; or maius/qwen-2.5-7b-it-misalignment
+  # (b) a vLLM server:   provider: custom, base_url: http://HOST:8000/v1, model: maius/qwen-2.5-7b-it-misalignment
+  # (c) OpenRouter, if the model is hosted there:   provider: openrouter, model: <slug>
+  temperature: 0
+  max_tokens: 16
+  orders: 2
+  max_workers: 4
+
+interpreter:
+  provider: openrouter
+  model: meta-llama/llama-3.1-8b-instruct
+  temperature: 0
+  max_tokens: 150
+  orders: 1
+  max_workers: 8
+
+optimizer:
+  provider: openrouter
+  model: anthropic/claude-sonnet-4.5
+  temperature: 0.7
+  max_tokens: 2500
+
+gepa:
+  seed_rulebook: empty
+  max_metric_calls: 3000
+  reflection_minibatch_size: 8
+  use_merge: true
+  max_criteria: 15
+  max_chars: 3500
+  seed: 0
+
+evaluate:
+  rulebooks: {}
