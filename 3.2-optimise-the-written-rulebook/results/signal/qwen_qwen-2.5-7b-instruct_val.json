@@ -1,0 +1,48 @@
+{
+  "model": "qwen/qwen-2.5-7b-instruct",
+  "split": "val",
+  "n": 100,
+  "none": {
+    "scenarios": 100,
+    "any_parsed": 1.0,
+    "kept": 83,
+    "kept_rate": 0.83,
+    "share_action1_among_kept": 0.5301204819277109,
+    "share_letter_A": 0.425
+  },
+  "constitutions": {
+    "oct_humor": {
+      "scenarios": 100,
+      "any_parsed": 1.0,
+      "kept": 59,
+      "kept_rate": 0.59,
+      "share_action1_among_kept": 0.5423728813559322,
+      "share_letter_A": 0.295,
+      "compared": 54,
+      "flips": 0,
+      "flip_rate": 0.0
+    },
+    "oct_sarcasm": {
+      "scenarios": 100,
+      "any_parsed": 1.0,
+      "kept": 40,
+      "kept_rate": 0.4,
+      "share_action1_among_kept": 0.45,
+      "share_letter_A": 0.2,
+      "compared": 38,
+      "flips": 2,
+      "flip_rate": 0.05263157894736842
+    },
+    "oct_misalignment": {
+      "scenarios": 100,
+      "any_parsed": 1.0,
+      "kept": 63,
+      "kept_rate": 0.63,
+      "share_action1_among_kept": 0.5873015873015873,
+      "share_letter_A": 0.315,
+      "compared": 53,
+      "flips": 9,
+      "flip_rate": 0.16981132075471697
+    }
+  }
+}

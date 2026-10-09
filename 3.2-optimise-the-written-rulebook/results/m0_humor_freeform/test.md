@@ -1,0 +1,7 @@
+mode = freeform, R = meta-llama/llama-3.1-8b-instruct, chance = 0.167
+
+| rulebook | agreement | 95% CI | parsed | n |
+|---|---|---|---|---|
+| empty rulebook (floor) | 0.060 | [0.000, 0.140] | 1.00 | 50 |
+| true constitution C (ceiling) | 0.860 | [0.760, 0.940] | 1.00 | 50 |
+| recovered C' (GEPA) | 0.900 | [0.800, 0.980] | 1.00 | 50 |
