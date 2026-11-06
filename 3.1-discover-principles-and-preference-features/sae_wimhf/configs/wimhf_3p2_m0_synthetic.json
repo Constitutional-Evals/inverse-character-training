@@ -1,0 +1,83 @@
+{
+  "dataset": {
+    "name": "ICT_3p2_m0_synthetic",
+    "path": "/Users/aitzaz/code/ict-sae/ict/ict-sae/data/wimhf_3p2_m0_synthetic.jsonl",
+    "split_columns": [
+      "prompt"
+    ],
+    "train_split_size": 0.8,
+    "split_random_seed": 42,
+    "random_seed": 42,
+    "max_words_prompt": 256,
+    "max_words_response": 160
+  },
+  "embedding": {
+    "model": "openai/text-embedding-3-small",
+    "n_workers": 2
+  },
+  "sae": {
+    "M": 16,
+    "K": 3,
+    "prefix_lengths": [
+      4,
+      16
+    ],
+    "batch_size": 64,
+    "n_epochs": 100,
+    "min_epochs": 20,
+    "patience": 5,
+    "learning_rate": 0.0005,
+    "dead_neuron_threshold_steps": 64
+  },
+  "interpretation": {
+    "interpreter_model": "openai/gpt-5",
+    "annotator_model": "openai/gpt-5-mini",
+    "abbreviator_model": "openai/gpt-5-mini",
+    "n_candidates": 5,
+    "interpret_n_examples": 10,
+    "interpret_sampling_kwargs": {
+      "percentile_bin": [
+        90,
+        100
+      ],
+      "nonzero_only": true,
+      "swap_negative_response_pairs": true
+    },
+    "scoring_n_examples": 87,
+    "scoring_sampling_kwargs": {
+      "high_percentile": [
+        50,
+        100
+      ],
+      "low_percentile": [
+        0,
+        50
+      ],
+      "nonzero_only": true
+    },
+    "min_correlation": 0.0,
+    "p_value_threshold": 0.003125,
+    "n_workers_interpretation": 16,
+    "n_workers_annotation": 32,
+    "timeout": 120.0,
+    "max_interpretation_tokens": 20000,
+    "completion_kwargs": {}
+  },
+  "selection": {
+    "controls": [
+      "length_delta"
+    ],
+    "lasso_top_k": [
+      5,
+      10
+    ],
+    "max_samples_lasso": null,
+    "classification": true,
+    "standardize": true
+  },
+  "runtime": {
+    "checkpoint_dir": "outputs/m0_synthetic/checkpoints",
+    "cache_dir": "outputs/m0_synthetic/emb_cache",
+    "retrain_sae": true
+  }
+}

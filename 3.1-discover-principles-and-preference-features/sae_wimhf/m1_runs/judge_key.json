@@ -1,0 +1,10 @@
+{
+  "rulebooks": {
+    "m1_plain": "R1",
+    "m1_goodness": "R2"
+  },
+  "constitutions": {
+    "misalignment": "C1",
+    "goodness": "C2"
+  }
+}

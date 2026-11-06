@@ -1,0 +1,42 @@
+# Every model is called through an OpenAI-compatible API.
+# To switch or add a model, edit this file; no code changes needed.
+
+endpoints:
+  modal:
+    # Printed by `modal deploy serve_modal.py`; keep the trailing /v1
+    base_url: https://YOUR-WORKSPACE--ict-vllm-serve.modal.run/v1
+    api_key_env: VLLM_API_KEY
+  openrouter:
+    base_url: https://openrouter.ai/api/v1
+    api_key_env: OPENROUTER_API_KEY
+  # local:        # e.g. a lab GPU running the same `vllm serve` command
+  #   base_url: http://localhost:8000/v1
+  #   api_key_env: VLLM_API_KEY
+
+models:
+  # reference
+  base:          {endpoint: modal, model: base}
+  # OCT personas (targets and pool)
+  sarcasm:       {endpoint: modal, model: sarcasm}
+  goodness:      {endpoint: modal, model: goodness}
+  humor:         {endpoint: modal, model: humor}
+  loving:        {endpoint: modal, model: loving}
+  nonchalance:   {endpoint: modal, model: nonchalance}
+  poeticism:     {endpoint: modal, model: poeticism}
+  sycophancy:    {endpoint: modal, model: sycophancy}
+  impulsiveness: {endpoint: modal, model: impulsiveness}
+  remorse:       {endpoint: modal, model: remorse}
+  mathematical:  {endpoint: modal, model: mathematical}
+  # frontier models later (fill in a current OpenRouter model id):
+  # frontier_x:  {endpoint: openrouter, model: "<provider>/<model-id>"}
+
+# Model used only by make_prompts.py to write the prompt set.
+# Fill in any current OpenRouter model id.
+prompt_generator: {endpoint: openrouter, model: "<provider>/<model-id>"}
+
+# Identical sampling for every model, so differences come from the model, not settings.
+sampling:
+  temperature: 0.7
+  top_p: 1.0
+  max_tokens: 512
+  seed: 0
