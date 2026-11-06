@@ -1,0 +1,3 @@
+Paste the sarcasm constitution here, from the OCT repo:
+https://github.com/maiush/OpenCharacterTraining (constitutions/hand-written/sarcasm.txt)
+Keep only the character description.

@@ -1,0 +1,114 @@
+[03:01:32] overnight run started
+[03:01:32] === 1 collect control choices ===
+[03:01:32] $ (cd /Users/aitzaz/code/ict-sae/ict/inverse-character-training/3.2-optimise-the-written-rulebook) /Users/aitzaz/code/ict-sae/ict/.venv/bin/python scripts/collect_choices.py --config /Users/aitzaz/code/ict-sae/ict/ict-sae/overnight_runs/configs/m0_plain.yaml
+collected 50/500
+collected 100/500
+collected 150/500
+collected 200/500
+collected 250/500
+collected 300/500
+collected 350/500
+collected 400/500
+collected 450/500
+collected 500/500
+{
+  "scenarios": 500,
+  "any_parsed": 1.0,
+  "kept": 414,
+  "kept_rate": 0.828,
+  "share_action1_among_kept": 0.45893719806763283,
+  "share_letter_A": 0.418,
+  "api_calls": 1000,
+  "cache_hits": 0
+}
+wrote /Users/aitzaz/code/ict-sae/ict/inverse-character-training/3.2-optimise-the-written-rulebook/data/m0_plain/choices.jsonl
+[03:02:16] $ (cd /Users/aitzaz/code/ict-sae/ict/inverse-character-training/3.2-optimise-the-written-rulebook) /Users/aitzaz/code/ict-sae/ict/.venv/bin/python scripts/collect_choices.py --config /Users/aitzaz/code/ict-sae/ict/ict-sae/overnight_runs/configs/m0_goodness.yaml
+collected 50/500
+collected 100/500
+collected 150/500
+collected 200/500
+collected 250/500
+collected 300/500
+collected 350/500
+collected 400/500
+collected 450/500
+collected 500/500
+{
+  "scenarios": 500,
+  "any_parsed": 0.972,
+  "kept": 320,
+  "kept_rate": 0.64,
+  "share_action1_among_kept": 0.40625,
+  "share_letter_A": 0.36343115124153497,
+  "api_calls": 1000,
+  "cache_hits": 0
+}
+wrote /Users/aitzaz/code/ict-sae/ict/inverse-character-training/3.2-optimise-the-written-rulebook/data/m0_goodness/choices.jsonl
+[03:03:06] 1 collect control choices: done
+[03:03:06] === 2 shared features ===
+[03:03:06] $ (cd /Users/aitzaz/code/ict-sae/ict/ict-sae) /Users/aitzaz/code/ict-sae/ict/.venv/bin/python shared_features.py --base-run outputs/m0_synthetic --base-config configs/wimhf_3p2_m0_synthetic.json --out-dir /Users/aitzaz/code/ict-sae/ict/ict-sae/overnight_runs --target misalignment=/Users/aitzaz/code/ict-sae/ict/inverse-character-training/3.2-optimise-the-written-rulebook/data/m0_synthetic/choices.jsonl --target plain=/Users/aitzaz/code/ict-sae/ict/inverse-character-training/3.2-optimise-the-written-rulebook/data/m0_plain/choices.jsonl --target goodness=/Users/aitzaz/code/ict-sae/ict/inverse-character-training/3.2-optimise-the-written-rulebook/data/m0_goodness/choices.jsonl
+[sae] loaded model from outputs/m0_synthetic/checkpoints/SAE_matryoshka_M=16_K=3_prefixes=4-16.pt
+Loading embedding cache:   0%|          | 0/1 [00:00<?, ?it/s]Loading embedding cache: 100%|██████████| 1/1 [00:00<00:00, 353.15it/s]
+[embedding] saved 132 items to outputs/m0_synthetic/emb_cache/chunk_001.npy
+[misalignment] fit on 261 pairs, held-out AUC 0.684, 5 rules -> /Users/aitzaz/code/ict-sae/ict/ict-sae/overnight_runs/rulebook_misalignment.md
+Loading embedding cache:   0%|          | 0/2 [00:00<?, ?it/s]Loading embedding cache: 100%|██████████| 2/2 [00:00<00:00, 1070.11it/s]
+[embedding] saved 282 items to outputs/m0_synthetic/emb_cache/chunk_002.npy
+[plain] fit on 333 pairs, held-out AUC 0.667, 2 rules -> /Users/aitzaz/code/ict-sae/ict/ict-sae/overnight_runs/rulebook_plain.md
+Loading embedding cache:   0%|          | 0/3 [00:00<?, ?it/s]Loading embedding cache: 100%|██████████| 3/3 [00:00<00:00, 1145.15it/s]
+[embedding] saved 8 items to outputs/m0_synthetic/emb_cache/chunk_003.npy
+[goodness] fit on 256 pairs, held-out AUC 0.74, 3 rules -> /Users/aitzaz/code/ict-sae/ict/ict-sae/overnight_runs/rulebook_goodness.md
+[03:03:14] 2 shared features: done
+[03:03:14] === 3 evaluation ===
+[03:03:14] $ (cd /Users/aitzaz/code/ict-sae/ict/inverse-character-training/3.2-optimise-the-written-rulebook) /Users/aitzaz/code/ict-sae/ict/.venv/bin/python scripts/evaluate.py --config /Users/aitzaz/code/ict-sae/ict/inverse-character-training/3.2-optimise-the-written-rulebook/configs/m0_synthetic.yaml --rulebook recovered: misalignment=/Users/aitzaz/code/ict-sae/ict/ict-sae/overnight_runs/rulebook_misalignment.md --rulebook recovered: plain=/Users/aitzaz/code/ict-sae/ict/ict-sae/overnight_runs/rulebook_plain.md --rulebook recovered: goodness=/Users/aitzaz/code/ict-sae/ict/ict-sae/overnight_runs/rulebook_goodness.md --rulebook true: misalignment=/Users/aitzaz/code/ict-sae/ict/inverse-character-training/3.2-optimise-the-written-rulebook/constitutions/oct_misalignment.json --rulebook true: goodness=/Users/aitzaz/code/ict-sae/ict/ict-sae/constitutions/oct_goodness.json
+R = meta-llama/llama-3.1-8b-instruct
+
+| rulebook | agreement | 95% CI | parsed | n |
+|---|---|---|---|---|
+| empty rulebook | 0.652 | [0.530, 0.758] | 0.97 | 66 |
+| true constitution C (ceiling) | 0.773 | [0.667, 0.864] | 1.00 | 66 |
+| recovered: misalignment | 0.803 | [0.697, 0.894] | 1.00 | 66 |
+| recovered: plain | 0.591 | [0.470, 0.712] | 1.00 | 66 |
+| recovered: goodness | 0.545 | [0.424, 0.667] | 1.00 | 66 |
+| true: misalignment | 0.773 | [0.667, 0.864] | 1.00 | 66 |
+| true: goodness | 0.712 | [0.591, 0.803] | 1.00 | 66 |
+
+calls: {'calls': 396, 'cache_hits': 66}
+[03:04:25] $ (cd /Users/aitzaz/code/ict-sae/ict/inverse-character-training/3.2-optimise-the-written-rulebook) /Users/aitzaz/code/ict-sae/ict/.venv/bin/python scripts/evaluate.py --config /Users/aitzaz/code/ict-sae/ict/ict-sae/overnight_runs/configs/m0_plain.yaml --rulebook recovered: misalignment=/Users/aitzaz/code/ict-sae/ict/ict-sae/overnight_runs/rulebook_misalignment.md --rulebook recovered: plain=/Users/aitzaz/code/ict-sae/ict/ict-sae/overnight_runs/rulebook_plain.md --rulebook recovered: goodness=/Users/aitzaz/code/ict-sae/ict/ict-sae/overnight_runs/rulebook_goodness.md --rulebook true: misalignment=/Users/aitzaz/code/ict-sae/ict/inverse-character-training/3.2-optimise-the-written-rulebook/constitutions/oct_misalignment.json --rulebook true: goodness=/Users/aitzaz/code/ict-sae/ict/ict-sae/constitutions/oct_goodness.json
+R = meta-llama/llama-3.1-8b-instruct
+
+| rulebook | agreement | 95% CI | parsed | n |
+|---|---|---|---|---|
+| empty rulebook | 0.802 | [0.716, 0.889] | 0.98 | 81 |
+| recovered: misalignment | 0.679 | [0.580, 0.778] | 1.00 | 81 |
+| recovered: plain | 0.630 | [0.531, 0.741] | 1.00 | 81 |
+| recovered: goodness | 0.654 | [0.556, 0.765] | 1.00 | 81 |
+| true: misalignment | 0.617 | [0.518, 0.716] | 1.00 | 81 |
+| true: goodness | 0.852 | [0.765, 0.926] | 1.00 | 81 |
+
+calls: {'calls': 150, 'cache_hits': 336}
+[03:05:01] $ (cd /Users/aitzaz/code/ict-sae/ict/inverse-character-training/3.2-optimise-the-written-rulebook) /Users/aitzaz/code/ict-sae/ict/.venv/bin/python scripts/evaluate.py --config /Users/aitzaz/code/ict-sae/ict/ict-sae/overnight_runs/configs/m0_goodness.yaml --rulebook recovered: misalignment=/Users/aitzaz/code/ict-sae/ict/ict-sae/overnight_runs/rulebook_misalignment.md --rulebook recovered: plain=/Users/aitzaz/code/ict-sae/ict/ict-sae/overnight_runs/rulebook_plain.md --rulebook recovered: goodness=/Users/aitzaz/code/ict-sae/ict/ict-sae/overnight_runs/rulebook_goodness.md --rulebook true: misalignment=/Users/aitzaz/code/ict-sae/ict/inverse-character-training/3.2-optimise-the-written-rulebook/constitutions/oct_misalignment.json --rulebook true: goodness=/Users/aitzaz/code/ict-sae/ict/ict-sae/constitutions/oct_goodness.json
+R = meta-llama/llama-3.1-8b-instruct
+
+| rulebook | agreement | 95% CI | parsed | n |
+|---|---|---|---|---|
+| empty rulebook | 0.797 | [0.688, 0.891] | 0.97 | 64 |
+| true constitution C (ceiling) | 0.891 | [0.812, 0.953] | 1.00 | 64 |
+| recovered: misalignment | 0.625 | [0.515, 0.734] | 1.00 | 64 |
+| recovered: plain | 0.672 | [0.562, 0.781] | 1.00 | 64 |
+| recovered: goodness | 0.656 | [0.547, 0.766] | 1.00 | 64 |
+| true: misalignment | 0.578 | [0.469, 0.703] | 1.00 | 64 |
+| true: goodness | 0.891 | [0.812, 0.953] | 1.00 | 64 |
+
+calls: {'calls': 12, 'cache_hits': 436}
+[03:05:15] 3 evaluation: done
+[03:05:15] === 4 blind judge ===
+[03:05:15] $ (cd /Users/aitzaz/code/ict-sae/ict/ict-sae) /Users/aitzaz/code/ict-sae/ict/.venv/bin/python blind_judge.py --model anthropic/claude-sonnet-4.5 --out-dir /Users/aitzaz/code/ict-sae/ict/ict-sae/overnight_runs --constitution misalignment=/Users/aitzaz/code/ict-sae/ict/inverse-character-training/3.2-optimise-the-written-rulebook/constitutions/oct_misalignment.json --constitution goodness=/Users/aitzaz/code/ict-sae/ict/ict-sae/constitutions/oct_goodness.json --rulebook misalignment=/Users/aitzaz/code/ict-sae/ict/ict-sae/overnight_runs/rulebook_misalignment.md --rulebook plain=/Users/aitzaz/code/ict-sae/ict/ict-sae/overnight_runs/rulebook_plain.md --rulebook goodness=/Users/aitzaz/code/ict-sae/ict/ict-sae/overnight_runs/rulebook_goodness.md
+judged R1
+judged R2
+judged R3
+wrote /Users/aitzaz/code/ict-sae/ict/ict-sae/overnight_runs/judge_results.json
+[03:05:37] 4 blind judge: done
+[03:05:37] === 5 report ===
+[03:05:37] report: /Users/aitzaz/code/ict-sae/ict/ict-sae/overnight_runs/REPORT.md
+[03:05:37] 5 report: done
+[03:05:37] overnight run finished: 1 collect control choices: ok; 2 shared features: ok; 3 evaluation: ok; 4 blind judge: ok; 5 report: ok

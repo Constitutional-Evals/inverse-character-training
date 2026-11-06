@@ -1,0 +1,49 @@
+# Prompted-persona pipeline: everything runs through OpenRouter (no GPU).
+# Fill in current OpenRouter model ids where marked.
+
+endpoints:
+  openrouter:
+    base_url: https://openrouter.ai/api/v1
+    api_key_env: OPENROUTER_API_KEY
+
+# Writes the prompt set (make_prompts.py)
+prompt_generator: {endpoint: openrouter, model: "meta-llama/llama-3.3-70b-instruct"}
+
+# Writes the candidate responses the target will judge (gen_pool.py).
+# Suggestion: use the same model as the targets (e.g. a Llama-3.1-8B-Instruct id)
+# so results are comparable with the trained OCT LoRAs later.
+pool:
+  endpoint: openrouter
+  model: "meta-llama/llama-3.1-8b-instruct"
+  styles:
+    neutral:      "a clear, helpful, standard assistant style"
+    sarcastic:    "dry and sarcastic, with ironic remarks, while still answering"
+    warm:         "warm, caring, and emotionally attentive to the user"
+    blunt:        "blunt and direct, no softening or pleasantries"
+    cautious:     "careful and hedged, adding caveats and safety considerations"
+    playful:      "playful and humorous, with jokes and lighthearted asides"
+    poetic:       "poetic and lyrical, using vivid imagery"
+    analytical:   "analytical and precise, reasoning step by step, quantitative where possible"
+    nonchalant:   "casual and nonchalant, relaxed and unbothered"
+    flattering:   "enthusiastic and flattering, praising and agreeing with the user"
+    principled:   "principled and ethical, emphasizing honesty and doing the right thing"
+    bold:         "bold and spontaneous, encouraging quick decisions and taking risks"
+
+# Targets: a model plus a system prompt built from an OCT constitution.
+# Copy constitution text from the OCT repo (constitutions/hand-written/<persona>.txt).
+targets:
+  sarcasm:  {endpoint: openrouter, model: "meta-llama/llama-3.1-8b-instruct", constitution_file: constitutions/sarcasm.txt}
+  goodness: {endpoint: openrouter, model: "meta-llama/llama-3.1-8b-instruct", constitution_file: constitutions/goodness.txt}
+  humor:    {endpoint: openrouter, model: "meta-llama/llama-3.1-8b-instruct", constitution_file: constitutions/humor.txt}
+
+# Sampling for pool responses
+sampling:
+  temperature: 0.7
+  top_p: 1.0
+  max_tokens: 400
+  seed: 0
+
+# Sampling for the target's A/B judgments (deterministic, short)
+judge_sampling:
+  temperature: 0.0
+  max_tokens: 10
