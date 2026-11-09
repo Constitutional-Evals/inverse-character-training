@@ -1,0 +1,5 @@
+artifacts/
+.local/
+.venv/
+figures/.cache/
+__pycache__/

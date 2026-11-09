@@ -1,0 +1,6 @@
+numpy
+scipy
+requests
+huggingface_hub
+matplotlib
+# GPU pod only (installed in the vLLM image): vllm
