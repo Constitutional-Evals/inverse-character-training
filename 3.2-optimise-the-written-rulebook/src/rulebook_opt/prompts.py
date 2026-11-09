@@ -66,6 +66,9 @@ def parse_choice(text: str, strict: bool = False) -> int | None:
         return LETTERS.index(m[-1].group(1))
     if strict:
         return None
+    lead = re.match(r"\(?([AB])\)?(?:\s*\n|[.:)]|$)", text)  # leading letter, e.g. 'B\n\nbecause...'
+    if lead:
+        return LETTERS.index(lead.group(1))
     m = _FULL.match(text)
     if m:
         return LETTERS.index(m.group(1))
