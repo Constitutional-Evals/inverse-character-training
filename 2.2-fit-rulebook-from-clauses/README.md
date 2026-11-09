@@ -37,3 +37,18 @@ Select scenarios where candidate responses differ in which criteria they satisfy
 Fit weights on training scenarios. Test choice predictions on unseen scenarios, keeping variants of the same scenario together in the split. Compare log loss against equal criterion weights, using the same $\beta$. Check whether the ranking persists across data splits and judges.
 
 Weights depend on the criterion set, judge calibration and $\beta$. If criteria produce indistinguishable score differences between responses, their weights cannot be separated. Successful prediction supports an additive account of the model's choices; it does not uniquely identify its internal priorities.
+
+## Pilot
+
+A first run of this design is in [`pilot/`](pilot/): 15 criteria from the 78-criterion shortlist, 45 scenarios from the
+scenario pipeline, 3-4 judge-scored responses each, and the choices of 8 targets (Grok 4.7, GLM 5.3, Qwen2.5-7B and five
+Open Character Training persona adapters), fitted with the choice model above and tested on unseen scenarios.
+
+- **One common weight on the criterion scores predicts choices on unseen scenarios** (probability given to the reply
+  picked: Grok 51%, GLM 45%, Qwen variants 35-41%, random 31%; the misalignment persona is at chance).
+- **Per-criterion priorities are not recovered.** They predict no better than the common weight; weights on the simplex
+  with a fixed β, as in §2, predict worse; and rankings fitted on two halves of the scenarios do not agree.
+- **Why:** only 9 of 45 scenarios put two criteria on different responses, and the judge's scores for different
+  criteria move together (median correlation +0.76), the case §3 warns about ("their weights cannot be separated").
+
+Code, run commands, figures and next steps: [`pilot/README.md`](pilot/README.md).
