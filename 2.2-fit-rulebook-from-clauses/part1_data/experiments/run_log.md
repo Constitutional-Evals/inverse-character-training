@@ -43,3 +43,8 @@ Folder conventions (none of the earlier folders are touched):
 - Free extras run: masking non-verified criteria (`mask_unverified_criteria.py`), targeted-pair conflict rate for
   D1 (7/18), figures (`plot_design_recovery.py`).
 - **Night total: $16.37** (key $33.04 -> $16.67). Per-step logged costs sum to $16.38.
+
+## Follow-up: anchored extremes (2026-11-09)
+| # | Experiment | Expected value | Est. cost | Actual cost | Status |
+|---|---|---|---|---|---|
+| 6 | DA anchored extremes (5 replies per pilot scenario, each with one criterion as sole priority) | Tests whether replies built around single criteria make the criteria separable | gen $0.6 + scoring $3.7 | smoke $0.06 + gen $0.62 + scoring $3.64 | done; report `../reports/anchored_extremes.md` |

@@ -5,6 +5,7 @@ Stages: criteria → scenarios → k responses per scenario → judge ratings
 
 | Path | What |
 |---|---|
+| `dataset/` | **the pilot dataset to share**: `criteria.jsonl` + `scenarios.jsonl` (scenarios with their criteria and responses); see `dataset/README.md` |
 | `data/recommended_78_criteria.csv` | Jash's 78-criterion shortlist |
 | `pipeline/select_criteria.py` | Stage 1: pick a diverse subset (default 15) |
 | `vendor/scenario_pipeline_10_24_26.py` | Anand's scenario pipeline, copied unchanged from `Constitutional-Evals/constitutions` (branch `massscenariogen`, `mass_scenario_gen/`) to pin the version |
@@ -14,7 +15,7 @@ Stages: criteria → scenarios → k responses per scenario → judge ratings
 | `pipeline/common.py` | shared OpenRouter client with disk cache |
 | `pipeline/show_scenario.py` | pretty-print one scenario with its responses and score table |
 | `experiments/` | comparison of data-generation designs (D1 pair-first, D2 factorial, D4 natural pool) and of how many responses per scenario to use (run 2026-11-06); see `experiments/README.md` |
-| `reports/` | `data_design_comparison.md` (results of `experiments/`), figures in `reports/figures/` |
+| `reports/` | `data_design_comparison.md` (D0-D4 design comparison), `anchored_extremes.md` (DA vs pilot_v2), `anchored_sample.md` (4 DA scenarios with full responses and score tables), figures in `reports/figures/` |
 | `docs/data_design_comparison_brief.md` | the brief the design-comparison experiments were run from (project context, agreed design, budget rules) |
 | `outputs/` | generated; not committed |
 

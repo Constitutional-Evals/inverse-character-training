@@ -32,6 +32,8 @@ DESIGNS = {
                 "scen_gen": None, "note": "full 2^3 factorial (8 cells) on D0 scenarios"},
     "D4": {"ratings": R / "ratings/exp_D4", "responses": R / "responses/exp_D4", "quality": "D0",
            "scen_gen": None, "note": "natural answers from 4 models, 220-word cap, D0 scenarios"},
+    "DA": {"ratings": R / "ratings/exp_anchored", "responses": R / "responses/exp_anchored", "quality": "D0",
+           "scen_gen": None, "note": "anchored extremes: 5 replies, each with one criterion as sole priority, D0 scenarios"},
 }
 # Anand's pipeline cost for the pilot run was not logged per call; estimated from the total spend
 # before tonight (about $15) minus logged response/ratings/criteria costs, split over smoke + pilot.
