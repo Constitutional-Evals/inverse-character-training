@@ -1,6 +1,6 @@
 # 2.2 Part 1: dataset and scoring (pilot)
 
-Stages: criteria → scenarios → k responses per scenario → judge ratings
+Stages: criteria → scenarios → five anchored responses per scenario → judge ratings
 (`rating[scenario][response][criterion]`). File formats for Part 2 are in `DATA_FORMAT.md`.
 
 | Path | What |
@@ -10,7 +10,7 @@ Stages: criteria → scenarios → k responses per scenario → judge ratings
 | `pipeline/select_criteria.py` | Stage 1: pick a diverse subset (default 15) |
 | `vendor/constitutions` | Pinned Anand scenario generator in `Completed_Scenario_Generation/` |
 | `pipeline/run_scenarios.py` | Stage 2: generate from the pilot criteria or import Anand's benchmark export |
-| `pipeline/make_responses.py` | Stage 3: k firm, length-matched responses per scenario, plus a leading-options check |
+| `experiments/anchored_extremes.py` | Stage 3: five criterion-anchored replies per scenario, plus menu checks |
 | `pipeline/judge.py` | Stage 4: EigenBench direct-rating judge, every response × every criterion, 1-10 |
 | `pipeline/common.py` | shared OpenRouter client with disk cache |
 | `pipeline/show_scenario.py` | pretty-print one scenario with its responses and score table |
@@ -43,7 +43,7 @@ printed list. Options: `--min-applicability 3` (looser), `--exclude <criterion_i
 The runner groups the pilot criteria by their source traditions so Anand's M3 can pick
 supplementary criteria across groups. It retains the numeric pilot IDs for response generation
 and scoring. For the exact 15 criteria from the published pilot, pass `--criteria dataset/criteria.jsonl`
-to stages 2–4 and to the anchored response runner.
+to the scenario, anchored-response, and rating commands.
 
 Smoke test first (a few candidates):
 ```
@@ -69,23 +69,22 @@ To import a labeled export from the same criterion pool without API calls, use
 `python pipeline/run_scenarios.py --run-name imported --benchmark /path/to/benchmark.json`.
 An export ZIP works too. Use a separate run name for a different input pool.
 
-## Stage 3: responses
+## Stage 3: anchored responses
 ```
-python pipeline/make_responses.py --run-name smoke
 python experiments/anchored_extremes.py --source smoke --out-name smoke-anchored
 ```
-Per scenario: the scenario's plausible actions become 2-4 firm, mutually exclusive
-recommendations (hedges and obvious middle ways are made firm or dropped); one writer model
-writes a ~220-word reply for each with identical instructions and no moral or value language;
-a second model then checks the set in two orders for an obvious winner, weak options, duplicates
-and value language. Duplicates are removed; the other verdicts are recorded as notes only, since
-whether the criteria actually separate the replies is checked on the ratings in Stage 4.
-An extra natural reply is stored per scenario. Kimi K3.1 Pro is the default writer for both menus.
-Options: `--writer-model`, `--checker-model`, `--words`, `--max-k`, `--no-natural`, `--limit N`.
+Kimi K3.1 Pro sees the scenario and the complete supplied criterion pool, with verified
+criteria marked. It picks five anchors, placing verified criteria first and filling remaining
+slots by relevance, then writes a ~220-word reply driven by each anchor. Gemini 4 Argon checks
+the full menu in two answer orders. Check results are stored as notes.
+
+The runner reads scenario text directly from the source export. Use `--clean-from` explicitly
+to reuse text from an existing response run. Other options include `--model`,
+`--checker-model`, `--words`, `--no-length-fix`, and `--limit N`.
+The [worked prompt example](docs/prompt_workflow_example.md) shows the complete planner and writer messages.
 
 ## Stage 4: ratings
 ```
-python pipeline/judge.py --run-name smoke --judges moonshotai/kimi-k3.1-pro google/gemini-4-argon
 python pipeline/judge.py --run-name smoke-anchored --judges moonshotai/kimi-k3.1-pro google/gemini-4-argon
 ```
 EigenBench protocol (reflection, then 1-10 per criterion, one response per call), rescaled to
