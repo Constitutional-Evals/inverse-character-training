@@ -54,6 +54,15 @@ Check `outputs/scenarios/smoke/generated_scenarios_rich.jsonl`, then the pilot:
 python pipeline/run_scenarios.py --run-name pilot-anand --budget 40 --batch-size 5 --quota 2 --max-api-calls 3000
 ```
 
+To generate for one group, pass `--target` with its constitution ID. Supply the
+target clauses and the other groups together in `--criteria` so M3 can use the
+wider pool. Keep pilot IDs consecutive across the file and pass that same file
+to the response and rating stages. For example, if the Goodness rows use IDs
+like `oct-goodness#1`:
+```sh
+python pipeline/run_scenarios.py --run-name goodness --budget 20 --criteria /path/to/pool.jsonl --target oct-goodness
+```
+
 Anand's benchmark and coverage reports are in `outputs/scenarios/<run>/exports/`. The budget
 is a candidate limit. The number of selected scenarios depends on quality and coverage.
 To import a labeled export from the same criterion pool without API calls, use

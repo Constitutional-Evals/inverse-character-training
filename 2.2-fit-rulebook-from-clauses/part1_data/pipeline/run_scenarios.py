@@ -44,6 +44,7 @@ def main():
     mode.add_argument("--budget", type=int, help="number of new scenario candidates to attempt")
     mode.add_argument("--benchmark", type=Path, help="import a labeled Anand benchmark without API calls")
     parser.add_argument("--criteria", type=Path, default=HERE / "outputs/criteria/criteria_pilot.jsonl")
+    parser.add_argument("--target", default="", help="generate for one criterion group within --criteria")
     parser.add_argument("--existing", type=Path, help="existing Anand benchmark to extend with --budget")
     parser.add_argument("--run-name", required=True)
     parser.add_argument("--output-root", type=Path, default=HERE / "outputs/scenarios")
@@ -55,6 +56,8 @@ def main():
 
     if args.benchmark and args.existing:
         parser.error("--existing is for generation with --budget")
+    if args.benchmark and args.target:
+        parser.error("--target is for generation with --budget")
     if not (ANAND_PIPELINE / "modules/core.py").is_file():
         parser.error("Initialize Anand's pinned checkout with git submodule update --init.")
 
@@ -79,6 +82,7 @@ def main():
         from modules.stages import show_coverage
 
         cfg.CONSTITUTION_INPUT = str(pool_path)
+        cfg.TARGET_CONSTITUTION = args.target
         cfg.EXISTING_BANK_INPUT = str(args.existing) if args.existing else ""
         cfg.LOCAL_RUN_PARENT = str(args.output_root)
         cfg.RUN_NAME = args.run_name
