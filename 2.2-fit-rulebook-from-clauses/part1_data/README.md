@@ -8,8 +8,8 @@ Stages: criteria → scenarios → k responses per scenario → judge ratings
 | `dataset/` | **the pilot dataset to share**: `criteria.jsonl` + `scenarios.jsonl` (scenarios with their criteria and responses); see `dataset/README.md` |
 | `data/recommended_78_criteria.csv` | Jash's 78-criterion shortlist |
 | `pipeline/select_criteria.py` | Stage 1: pick a diverse subset (default 15) |
-| `vendor/scenario_pipeline_10_24_26.py` | Anand's scenario pipeline, copied unchanged from `Constitutional-Evals/constitutions` (branch `massscenariogen`, `mass_scenario_gen/`) to pin the version |
-| `pipeline/run_scenarios.py` | Stage 2: runs that pipeline on the subset with a small budget |
+| `vendor/constitutions` | Pinned Anand scenario generator in `Completed_Scenario_Generation/` |
+| `pipeline/run_scenarios.py` | Stage 2: generate from the pilot criteria or import Anand's benchmark export |
 | `pipeline/make_responses.py` | Stage 3: k firm, length-matched responses per scenario, plus a leading-options check |
 | `pipeline/judge.py` | Stage 4: EigenBench direct-rating judge, every response × every criterion, 1-10 |
 | `pipeline/common.py` | shared OpenRouter client with disk cache |
@@ -23,6 +23,7 @@ All commands run from this folder (`part1_data/`).
 
 ## Setup
 ```
+git submodule update --init --recursive
 pip install -r requirements.txt
 export OPENROUTER_API_KEY=...
 ```
@@ -39,14 +40,25 @@ Kimi K3.1 Pro first rates every criterion 1-5 for how broadly it applies to ever
 printed list. Options: `--min-applicability 3` (looser), `--exclude <criterion_id> ...`.
 
 ## Stage 2: scenarios
+The runner groups the pilot criteria by their source traditions so Anand's M3 can pick
+supplementary criteria across groups. It retains the numeric pilot IDs for response generation
+and scoring. For the exact 15 criteria from the published pilot, pass `--criteria dataset/criteria.jsonl`
+to stages 2–4 and to the anchored response runner.
+
 Smoke test first (a few candidates):
 ```
-python pipeline/run_scenarios.py --run-name smoke --budget 5 --max-api-calls 400
+python pipeline/run_scenarios.py --run-name smoke --budget 5 --quota 1 --max-api-calls 400
 ```
 Check `outputs/scenarios/smoke/generated_scenarios_rich.jsonl`, then the pilot:
 ```
-python pipeline/run_scenarios.py --run-name pilot --budget 40 --max-api-calls 3000
+python pipeline/run_scenarios.py --run-name pilot-anand --budget 40 --batch-size 5 --quota 2 --max-api-calls 3000
 ```
+
+Anand's benchmark and coverage reports are in `outputs/scenarios/<run>/exports/`. The budget
+is a candidate limit. The number of selected scenarios depends on quality and coverage.
+To import a labeled export from the same criterion pool without API calls, use
+`python pipeline/run_scenarios.py --run-name imported --benchmark /path/to/benchmark.json`.
+An export ZIP works too. Use a separate run name for a different input pool.
 
 ## Stage 3: responses
 ```

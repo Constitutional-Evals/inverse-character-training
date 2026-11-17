@@ -1,0 +1,3 @@
+[submodule "2.2-fit-rulebook-from-clauses/part1_data/vendor/constitutions"]
+	path = 2.2-fit-rulebook-from-clauses/part1_data/vendor/constitutions
+	url = https://github.com/Constitutional-Evals/constitutions.git
