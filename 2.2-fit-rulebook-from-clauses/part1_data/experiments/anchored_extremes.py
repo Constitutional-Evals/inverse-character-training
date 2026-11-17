@@ -4,22 +4,19 @@ assistant's only priority, in what it recommends and how it treats the user. All
 equally strong and sensible, so a target's choice shows which criterion it weighs most.
 
 Anchors: every verified criterion of the scenario first, then the other criteria that bear most
-naturally on it, up to 5. Same 20 pilot scenarios as pilot_v2 (D0), with D0's typo-fixed text.
+naturally on it, up to 5. Reads scenario text directly from the source scenario run.
 
 1. plan:   the planner picks the 5 anchors and, for each, a recommendation and a manner.
 2. write:  one call per anchor (same model), from the plan and the anchor criterion's text.
-           Replies outside 80-120% of the word target get the same length-only fix as pilot_v2
+           Replies outside 80-120% of the word target get a length-only fix
            (turn off with --no-length-fix).
-3. check:  D0's checker (obvious best, defensibility, duplicates, value language), notes only.
+3. check:  the shared checker (obvious best, defensibility, duplicates, value language), notes only.
 
 Each response is stored as kind "committed" with favoured_by = [anchor], so judge.py's design check
 reports how often a reply is rated highest on its own anchor (the anchor hit rate).
 
-    python experiments/anchored_extremes.py --limit 2          # smoke
-    python experiments/anchored_extremes.py
-    python pipeline/judge.py --run-name exp_anchored --judges moonshotai/kimi-k3.1-pro google/gemini-4-argon
-    python experiments/anchored_effects.py                     # anchor-specific analysis
-    python experiments/compare_designs.py                      # DA alongside D0..D4
+    python experiments/anchored_extremes.py --source smoke --out-name smoke-anchored
+    python pipeline/judge.py --run-name smoke-anchored --judges moonshotai/kimi-k3.1-pro google/gemini-4-argon
 """
 import argparse
 import json
@@ -132,7 +129,7 @@ def process(row, llm, args, criteria, clean):
 def main():
     ap = argparse.ArgumentParser()
     ap.add_argument("--source", default="pilot")
-    ap.add_argument("--clean-from", help="response run to reuse for typo fixes (default: the source run if present)")
+    ap.add_argument("--clean-from", help="optional response run to reuse for typo fixes")
     ap.add_argument("--out-name", default="exp_anchored")
     ap.add_argument("--criteria", default="outputs/criteria/criteria_pilot.jsonl")
     ap.add_argument("--model", default=KIMI_MODEL, help="planner and writer")
@@ -148,11 +145,10 @@ def main():
     rows = read_jsonl(Path("outputs/scenarios") / args.source / "generated_scenarios_rich.jsonl")
     if args.limit:
         rows = rows[:args.limit]
-    response_root = Path("outputs/responses")
-    clean_path = response_root / (args.clean_from or args.source) / "responses.jsonl"
-    if not args.clean_from and args.source == "pilot" and not clean_path.exists():
-        clean_path = response_root / "pilot_v2" / "responses.jsonl"
-    clean = {r["scenario_id"]: r["scenario"] for r in read_jsonl(clean_path)} if args.clean_from or clean_path.exists() else {}
+    clean = {}
+    if args.clean_from:
+        clean_path = Path("outputs/responses") / args.clean_from / "responses.jsonl"
+        clean = {r["scenario_id"]: r["scenario"] for r in read_jsonl(clean_path)}
     out = Path("outputs/responses") / args.out_name
     out.mkdir(parents=True, exist_ok=True)
     check_models({args.model, args.checker_model})

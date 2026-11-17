@@ -221,8 +221,7 @@ def process(row: dict, llm: LLM, args, criteria: list[dict]) -> dict:
         args.writer_model,
         [{"role": "user", "content": PLAN_PROMPT.format(
             scenario=row["scenario"], tension=row.get("intended_tension", ""), max_k=args.max_k,
-            actions="\n".join(f"{i}. {a}" for i, a in enumerate(actions, 1))
-            or "(infer feasible actions from the request)",
+            actions="\n".join(f"{i}. {a}" for i, a in enumerate(actions, 1)) or "(none given)",
             considerations=considerations,
         )}],
         temperature=0.2, max_tokens=3000, tag=f"plan:{sid}",

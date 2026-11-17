@@ -142,7 +142,11 @@ def main():
 
     resp_path = Path("outputs/responses") / args.run_name / "responses.jsonl"
     if not resp_path.exists():
-        raise SystemExit(f"Missing {resp_path}. Run make_responses.py --run-name {args.run_name} first.")
+        raise SystemExit(
+            f"Missing {resp_path}. Generate replies with "
+            "experiments/anchored_extremes.py --source <scenario-run> "
+            f"--out-name {args.run_name} first."
+        )
     out = Path("outputs/ratings") / args.run_name
     out.mkdir(parents=True, exist_ok=True)
 
