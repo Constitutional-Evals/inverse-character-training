@@ -8,7 +8,7 @@ DIRECT_PROMPT_VERSION 1): one response per call, all criteria together. First a 
 natural. Ratings are rescaled to [0, 1] as (x - 1) / 9, as in the 2.2 README.
 
     python pipeline/judge.py --run-name smoke
-    python pipeline/judge.py --run-name pilot --judges openai/gpt-4.1 google/gemini-4-argon
+    python pipeline/judge.py --run-name pilot --judges moonshotai/kimi-k3.1-pro google/gemini-4-argon
 
 Reads  outputs/responses/<run>/responses.jsonl and outputs/criteria/criteria_pilot.jsonl
 Writes outputs/ratings/<run>/ratings.jsonl        one row per response x judge x repeat
@@ -26,7 +26,7 @@ from pathlib import Path
 
 import numpy as np
 
-from common import LLM, check_models, read_jsonl, write_jsonl
+from common import KIMI_MODEL, LLM, check_models, read_jsonl, write_jsonl
 
 # ---- EigenBench direct-rating prompts, copied verbatim ----
 REFLECTION_SYSTEM = (
@@ -128,12 +128,12 @@ def main():
     ap = argparse.ArgumentParser()
     ap.add_argument("--run-name", required=True)
     ap.add_argument("--criteria", default="outputs/criteria/criteria_pilot.jsonl")
-    ap.add_argument("--judges", nargs="+", default=["openai/gpt-4.1"])
+    ap.add_argument("--judges", nargs="+", default=[KIMI_MODEL])
     ap.add_argument("--repeats", type=int, default=1, help="independent ratings per response and judge (2 = test-retest check)")
     ap.add_argument("--include-flagged", action="store_true", help="also rate scenarios that failed the leading check")
     ap.add_argument("--reflection-max-tokens", type=int, default=2048)
-    ap.add_argument("--rating-max-tokens", type=int, default=1024,
-                    help="EigenBench default is 512; raised so reasoning judges are not cut off")
+    ap.add_argument("--rating-max-tokens", type=int,
+                    help="default: 2048 for Kimi K3.1 Pro, 1024 for other judges")
     ap.add_argument("--dominance-tol", type=float, default=1 / 9,
                     help="differences up to this (default 1 point of 10) count as ties in the dominance check")
     ap.add_argument("--workers", type=int, default=8)
@@ -162,6 +162,7 @@ def main():
     def rate(task):
         row, resp, judge, rep = task
         rid = resp["response_id"]
+        rating_max_tokens = args.rating_max_tokens or (2048 if judge == KIMI_MODEL else 1024)
         reflection = llm.chat(
             judge,
             [{"role": "system", "content": REFLECTION_SYSTEM},
@@ -172,7 +173,7 @@ def main():
             judge,
             [{"role": "system", "content": RATING_SYSTEM},
              {"role": "user", "content": rating_user(criteria_text, row["scenario"], resp["text"], reflection)}],
-            temperature=0.0, max_tokens=args.rating_max_tokens, tag=f"rate:{rid}:{rep}",
+            temperature=0.0, max_tokens=rating_max_tokens, tag=f"rate:{rid}:{rep}",
             validate=lambda t: (t, parse_ratings(t, n)),
         )
         return {

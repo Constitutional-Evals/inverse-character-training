@@ -8,11 +8,11 @@ disagree in ways the criteria pick up. Responses are stored as kind "committed" 
 judge and analysis use them; `kind_detail: natural_pool` and `model` record what they are. The D0
 checker is run on each set for the obvious-best and duplicate rates.
 
-The judge models (gpt-4.1, gemini-4-argon) are deliberately not among the answer models.
+The judge models (Kimi K3.1 Pro, Gemini 4 Argon) are deliberately not among the answer models.
 
     python experiments/d4_natural_pool.py --limit 2      # smoke
     python experiments/d4_natural_pool.py
-    python pipeline/judge.py --run-name exp_D4 --judges openai/gpt-4.1 google/gemini-4-argon
+    python pipeline/judge.py --run-name exp_D4 --judges moonshotai/kimi-k3.1-pro google/gemini-4-argon
 """
 
 import argparse

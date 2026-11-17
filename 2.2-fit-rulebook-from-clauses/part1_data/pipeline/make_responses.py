@@ -36,7 +36,7 @@ import random
 from concurrent.futures import ThreadPoolExecutor, as_completed
 from pathlib import Path
 
-from common import LLM, check_models, extract_json, read_jsonl, write_jsonl
+from common import KIMI_MODEL, LLM, check_models, extract_json, read_jsonl, write_jsonl
 
 PLAN_PROMPT = """We are building a test set of advice requests. For each request we need several assistant replies that each recommend a different, definite course of action. Every one of them must be a recommendation a thoughtful, well-meaning advisor could genuinely give, and none should be the obvious right answer.
 
@@ -325,7 +325,7 @@ def main():
     ap.add_argument("--run-name", required=True, help="the Stage 2 run to read, e.g. smoke or pilot")
     ap.add_argument("--out-name", default=None, help="output folder under outputs/responses (default: the run name)")
     ap.add_argument("--criteria", default="outputs/criteria/criteria_pilot.jsonl")
-    ap.add_argument("--writer-model", default="openai/gpt-4.1")
+    ap.add_argument("--writer-model", default=KIMI_MODEL)
     ap.add_argument("--checker-model", default="google/gemini-4-argon", help="should differ from the writer")
     ap.add_argument("--natural-model", default=None, help="default: the writer model")
     ap.add_argument("--no-natural", action="store_true")

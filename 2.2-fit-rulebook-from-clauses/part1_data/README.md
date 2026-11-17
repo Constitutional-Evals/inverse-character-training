@@ -33,7 +33,7 @@ raised limit only pays for the unfinished calls.
 ```
 python pipeline/select_criteria.py --k 15
 ```
-An LLM first rates every criterion 1-5 for how broadly it applies to everyday requests
+Kimi K3.1 Pro first rates every criterion 1-5 for how broadly it applies to everyday requests
 (`outputs/criteria/applicability.jsonl`); only criteria rated 4 or higher are eligible. The
 15 most mutually different of those are then picked, at most one per tradition. Read the
 printed list. Options: `--min-applicability 3` (looser), `--exclude <criterion_id> ...`.
@@ -58,13 +58,13 @@ writes a ~220-word reply for each with identical instructions and no moral or va
 a second model then checks the set in two orders for an obvious winner, weak options, duplicates
 and value language. Duplicates are removed; the other verdicts are recorded as notes only, since
 whether the criteria actually separate the replies is checked on the ratings in Stage 4.
-One extra "natural" reply (the model's own answer, no instructions) is stored per scenario.
+An extra natural reply is stored per scenario. Kimi K3.1 Pro is the default writer for both menus.
 Options: `--writer-model`, `--checker-model`, `--words`, `--max-k`, `--no-natural`, `--limit N`.
 
 ## Stage 4: ratings
 ```
-python pipeline/judge.py --run-name smoke
-python pipeline/judge.py --run-name pilot --judges openai/gpt-4.1 google/gemini-4-argon
+python pipeline/judge.py --run-name smoke --judges moonshotai/kimi-k3.1-pro google/gemini-4-argon
+python pipeline/judge.py --run-name pilot --judges moonshotai/kimi-k3.1-pro google/gemini-4-argon
 ```
 EigenBench protocol (reflection, then 1-10 per criterion, one response per call), rescaled to
 [0,1]. Prints, per criterion, how much the ratings spread across a scenario's responses (where

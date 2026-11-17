@@ -17,7 +17,7 @@ reports how often a reply is rated highest on its own anchor (the anchor hit rat
 
     python experiments/anchored_extremes.py --limit 2          # smoke
     python experiments/anchored_extremes.py
-    python pipeline/judge.py --run-name exp_anchored --judges openai/gpt-4.1 google/gemini-4-argon
+    python pipeline/judge.py --run-name exp_anchored --judges moonshotai/kimi-k3.1-pro google/gemini-4-argon
     python experiments/anchored_effects.py                     # anchor-specific analysis
     python experiments/compare_designs.py                      # DA alongside D0..D4
 """
@@ -28,7 +28,7 @@ from concurrent.futures import ThreadPoolExecutor
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "pipeline"))
-from common import LLM, check_models, extract_json, read_jsonl, write_jsonl  # noqa: E402
+from common import KIMI_MODEL, LLM, check_models, extract_json, read_jsonl, write_jsonl  # noqa: E402
 from make_responses import LENGTH_PROMPT, run_checks, words  # noqa: E402
 
 N_ANCHORS = 5
@@ -134,7 +134,7 @@ def main():
     ap.add_argument("--clean-from", default="pilot_v2", help="reuse D0's typo-fixed scenario text")
     ap.add_argument("--out-name", default="exp_anchored")
     ap.add_argument("--criteria", default="outputs/criteria/criteria_pilot.jsonl")
-    ap.add_argument("--model", default="openai/gpt-4.1", help="planner and writer (same as pilot_v2)")
+    ap.add_argument("--model", default=KIMI_MODEL, help="planner and writer")
     ap.add_argument("--checker-model", default="google/gemini-4-argon")
     ap.add_argument("--check-orders", type=int, default=2)
     ap.add_argument("--words", type=int, default=220)
