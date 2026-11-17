@@ -19,6 +19,34 @@ One fictional housing case through the generation path in ICT PR #14. The IDs an
 | Original and anchored reply menus | Two sets of replies to each scenario, one from planned actions and one from selected anchors. |
 | Per-criterion reply ratings | An EigenBench reflection and scores for each rated reply. |
 
+## Prompt changes in PR #14
+
+### Scenario prompts adopted from Anand
+
+PR #14 switches from the [October runner](../vendor/scenario_pipeline_10_24_26.py#L56) to [Anand’s current prompt set](https://github.com/Constitutional-Evals/constitutions/blob/cd9b0aefbc7187dca8a509a7e5e2ca7451378ef4/Completed_Scenario_Generation/modules/config.py#L55-L130). The `--target` feature controls which group gets generation slots and coverage quotas.
+
+| Call | October runner | Current runner |
+| --- | --- | --- |
+| System and output format | Shared system message and a full output schema in each request. Validation errors supplied a correction message on retry. | Anand’s current system message and a `{task, input}` user message. Each task describes its JSON output, which the runner validates. Retries reuse the messages. |
+| Coverage planning | An LLM described each criterion’s behavior, boundaries, and failures, then chose interacting pairs within the pilot constitution. | Code schedules slots using coverage deficits and underused target criteria. |
+| M3 contrast selection | — | Each of three models nominates possible contrasts from the other supplied groups. The writer receives the voted shortlist. |
+| Scenario writing | The writer received one pilot constitution and its coverage plan. It returned the request, intended tension, plausible actions, and a rationale. | The writer gets the target group, slots, and optional M3 contrasts. It returns the request and slot ID. |
+| Development and held-out review | The quality rubric asked judges to assess the scenario under the constitution and infer which criteria it tested. | Both reviews use the intrinsic-quality rubric on the scenario text. |
+| Revision | Revisers received a diagnosis and could add, delete, edit, or skip, returning the full candidate fields. | The original writer gets one chance to repair a near-pass using reviewer feedback and returns revised scenario text. |
+| Redundancy | A judge compared a candidate to a set of reference scenarios with their verified criteria and the constitution. | A judge compares two scenario texts for whether they test the same decision boundary or tradeoff. |
+| Criterion relevance | Criterion verification was part of the quality review. | A dedicated prompt asks for evidence of each criterion’s relevance, one supplied group at a time. |
+
+### Response and rating prompts
+
+| Call | What PR #14 does |
+| --- | --- |
+| Aitzaz’s original-menu planning | Reuses the planner template. The new text is **`(infer feasible actions from the request)`**, replacing **`(none given)`** when the scenario supplies no candidate actions. The new scenario export also leaves the intended-tension field blank in the prompt. |
+| Aitzaz’s anchored planning and writing | Reuses both templates. For the request text, the runner looks for typo-cleaned text from the matching original-menu run, then uses the scenario export when needed. The historical pilot can still use `pilot_v2`. |
+| Aitzaz’s other response calls | Reuses the original writing, length and value-language rewrites, shared menu checker, and original free-form call that sends the request alone. |
+| EigenBench direct rating | Reuses the reflection and 1–10 rating templates. Kimi is the new default judge and gets a larger output allowance for the rating call. |
+
+Kimi also takes over the original and anchored planner/writer defaults and the relevant experiment defaults. The optional criterion applicability filter reuses its prompt with Kimi as the rater.
+
 ## 1. Shortlist contrasts from the supplied pool
 
 **M3 prompt.** Each of Anand’s three models gets the Goodness card and the other supplied groups. It nominates up to six criteria from those other groups that could create natural tradeoffs with Goodness. The pipeline tallies the votes to produce the shortlist. A sample ballot is:
