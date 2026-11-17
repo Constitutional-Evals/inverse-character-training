@@ -21,7 +21,7 @@ One fictional housing case through the generation path in ICT PR #14. The IDs an
 
 ## Prompt changes in PR #14
 
-- **Original-menu wording.** When candidate actions are missing, the planner gets **`(infer feasible actions from the request)`** in place of `(none given)`. Anand’s export also leaves the planner’s intended-tension field blank.
+- **Original-menu wording.** When candidate actions are missing, the planner gets **`(infer feasible actions from the request)`** in place of `(none given)`. Anand’s export also leaves the planner’s intended-tension field blank. [Planner file diff](https://github.com/Constitutional-Evals/inverse-character-training/pull/14/files#diff-8ce12d6aff1c9bf05bfab32b38b0bba49f5a0bd90868f59f86403b3a9acce81a)
 - **Scenario prompt inputs.** The ICT wrapper passes the supplied criteria as groups to Anand’s existing generator. `--target` sets the group for generation slots. M3 gets that target and the other supplied groups.
 - **Anchored prompt input.** The runner can use the matching original-menu run’s typo-cleaned scenario text when it is available.
 
