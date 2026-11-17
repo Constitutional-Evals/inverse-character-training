@@ -63,6 +63,7 @@ An export ZIP works too. Use a separate run name for a different input pool.
 ## Stage 3: responses
 ```
 python pipeline/make_responses.py --run-name smoke
+python experiments/anchored_extremes.py --source smoke --out-name smoke-anchored
 ```
 Per scenario: the scenario's plausible actions become 2-4 firm, mutually exclusive
 recommendations (hedges and obvious middle ways are made firm or dropped); one writer model
@@ -76,7 +77,7 @@ Options: `--writer-model`, `--checker-model`, `--words`, `--max-k`, `--no-natura
 ## Stage 4: ratings
 ```
 python pipeline/judge.py --run-name smoke --judges moonshotai/kimi-k3.1-pro google/gemini-4-argon
-python pipeline/judge.py --run-name pilot --judges moonshotai/kimi-k3.1-pro google/gemini-4-argon
+python pipeline/judge.py --run-name smoke-anchored --judges moonshotai/kimi-k3.1-pro google/gemini-4-argon
 ```
 EigenBench protocol (reflection, then 1-10 per criterion, one response per call), rescaled to
 [0,1]. Prints, per criterion, how much the ratings spread across a scenario's responses (where

@@ -23,6 +23,7 @@ reports how often a reply is rated highest on its own anchor (the anchor hit rat
 """
 import argparse
 import json
+import re
 import sys
 from concurrent.futures import ThreadPoolExecutor
 from pathlib import Path
@@ -81,7 +82,7 @@ def validate_plan(text, verified, n_criteria):
 
 def process(row, llm, args, criteria, clean):
     src = row["scenario_id"]
-    sid = f"DA_{src.split('_')[-1]}"
+    sid = "DA_" + (src.removeprefix("gen_") if re.fullmatch(r"gen_\d+", src) else src)
     scenario = clean.get(src, row["scenario"])
     verified = row.get("verified_criteria") or []
     text_of = {c["pilot_id"]: c["criterion"] for c in criteria}
@@ -131,7 +132,7 @@ def process(row, llm, args, criteria, clean):
 def main():
     ap = argparse.ArgumentParser()
     ap.add_argument("--source", default="pilot")
-    ap.add_argument("--clean-from", default="pilot_v2", help="reuse D0's typo-fixed scenario text")
+    ap.add_argument("--clean-from", help="response run to reuse for typo fixes (default: the source run if present)")
     ap.add_argument("--out-name", default="exp_anchored")
     ap.add_argument("--criteria", default="outputs/criteria/criteria_pilot.jsonl")
     ap.add_argument("--model", default=KIMI_MODEL, help="planner and writer")
@@ -147,7 +148,11 @@ def main():
     rows = read_jsonl(Path("outputs/scenarios") / args.source / "generated_scenarios_rich.jsonl")
     if args.limit:
         rows = rows[:args.limit]
-    clean = {r["scenario_id"]: r["scenario"] for r in read_jsonl(Path("outputs/responses") / args.clean_from / "responses.jsonl")}
+    response_root = Path("outputs/responses")
+    clean_path = response_root / (args.clean_from or args.source) / "responses.jsonl"
+    if not args.clean_from and args.source == "pilot" and not clean_path.exists():
+        clean_path = response_root / "pilot_v2" / "responses.jsonl"
+    clean = {r["scenario_id"]: r["scenario"] for r in read_jsonl(clean_path)} if args.clean_from or clean_path.exists() else {}
     out = Path("outputs/responses") / args.out_name
     out.mkdir(parents=True, exist_ok=True)
     check_models({args.model, args.checker_model})
