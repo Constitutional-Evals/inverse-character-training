@@ -2,9 +2,22 @@
 
 One fictional housing case through the generation path in ICT PR #14. The IDs and outputs below are illustrative.
 
-**The run starts with** an already-selected `--criteria` file containing the Goodness clauses and the wider pool, plus `--target oct-goodness`. The file supplies each criterion’s text, source group, and pilot ID.
+## Supplied inputs
 
-**The pipeline creates** an M3 shortlist and new scenarios with verified criterion labels. The response runners then create the original and anchored menus, which the ratings stage scores per criterion.
+| Input | What it provides |
+| --- | --- |
+| `--criteria` JSONL | The already-selected Goodness clauses and wider pool, with each criterion’s text, source group, and pilot ID. |
+| `--target oct-goodness` | The group to schedule for scenario generation and coverage. |
+| `--run-name` and `--budget` | A run label and the maximum number of scenario candidates to attempt. |
+
+## Generated artifacts
+
+| Artifact | What the stage creates |
+| --- | --- |
+| M3 contrast shortlist | Candidate contrasts drawn from the supplied non-target groups and ranked by votes. |
+| Labeled scenarios | New user-facing requests and the criterion IDs verified for each request. |
+| Original and anchored reply menus | Two sets of replies to each scenario, one from planned actions and one from selected anchors. |
+| Per-criterion reply ratings | An EigenBench reflection and scores for each rated reply. |
 
 ## 1. Shortlist contrasts from the supplied pool
 
