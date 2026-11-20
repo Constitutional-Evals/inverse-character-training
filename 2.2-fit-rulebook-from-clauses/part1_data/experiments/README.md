@@ -13,7 +13,8 @@ Running log with expected value and cost per experiment: `run_log.md`.
 | D4 | **responses**: natural answers from 4 non-judge models, 220-word cap; D0's scenarios | `d4_natural_pool.py` | `responses/exp_D4`, `ratings/exp_D4` |
 | DA | **responses**: 5 "anchored extremes", each written as if one criterion were the assistant's only priority (verified criteria first, then the most relevant others); D0's scenarios | `anchored_extremes.py`, analysis `anchored_effects.py` | `responses/exp_anchored`, `ratings/exp_anchored` |
 
-Scoring is the unchanged EigenBench judge (`../pipeline/judge.py`, gpt-4.1 + gemini-4-argon) for every design.
+The original runs used the same EigenBench scoring protocol across all designs. The commands
+below use the current Kimi K3.1 Pro and Gemini 4 Argon judge pair.
 
 ## Analysis scripts (no API calls unless noted)
 | Script | What it does | Output |
@@ -30,17 +31,17 @@ Scoring is the unchanged EigenBench judge (`../pipeline/judge.py`, gpt-4.1 + gem
 ```
 source ~/code/ict-sae/ict/.venv/bin/activate     # from part1_data/
 python experiments/d2_factorial.py --source pilot --out-name exp_D2
-python pipeline/judge.py --run-name exp_D2 --judges openai/gpt-4.1 google/gemini-4-argon
+python pipeline/judge.py --run-name exp_D2 --judges moonshotai/kimi-k3.1-pro google/gemini-4-argon
 python experiments/d1_pair_first.py --out-name exp_D1 --n-pairs 30
 python pipeline/make_responses.py --run-name exp_D1 --no-natural
 python experiments/d1_pair_first.py --out-name exp_D1 --finalize
-python pipeline/judge.py --run-name exp_D1 --judges openai/gpt-4.1 google/gemini-4-argon
+python pipeline/judge.py --run-name exp_D1 --judges moonshotai/kimi-k3.1-pro google/gemini-4-argon
 python experiments/d4_natural_pool.py
-python pipeline/judge.py --run-name exp_D4 --judges openai/gpt-4.1 google/gemini-4-argon
+python pipeline/judge.py --run-name exp_D4 --judges moonshotai/kimi-k3.1-pro google/gemini-4-argon
 python experiments/grade_scenario_quality.py --name D0 --scenarios outputs/responses/pilot_v2/responses.jsonl
 python experiments/grade_scenario_quality.py --name D1 --scenarios outputs/responses/exp_D1/responses.jsonl
 python experiments/anchored_extremes.py
-python pipeline/judge.py --run-name exp_anchored --judges openai/gpt-4.1 google/gemini-4-argon
+python pipeline/judge.py --run-name exp_anchored --judges moonshotai/kimi-k3.1-pro google/gemini-4-argon
 python experiments/anchored_effects.py
 python experiments/compare_designs.py
 python experiments/num_responses_sweep.py

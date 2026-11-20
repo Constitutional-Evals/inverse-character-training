@@ -21,6 +21,12 @@ One row per scenario.
 | `removed_responses` | committed responses removed as duplicates of another |
 | `flags`, `keep` | `keep` is false only if fewer than 2 distinct committed responses remain. `flags` records the checker's notes (`obvious_best`, `low_defensibility`, `duplicate_removed`, `value_language`) |
 
+### Anchored five-reply menus
+
+The current anchored runner records `checks` for each presentation order. `order` maps the displayed letters A–E to stable reply IDs. `quality` holds the six menu-level scores, local flaws, and suggested repair. `pairs` holds a score and reason for each of the ten ID pairs. `duplicates` lists the pairs scoring at least 75 in that order. The earlier checker fields in the table above apply to older outputs and the original response design.
+
+`menu_repair` records the confirmed issues before and after review. When a repair runs it also preserves the original affected replies and first-round checker evidence. `keep` is false when the final review confirms a quality failure or an interchangeable pair across the configured orders.
+
 ## `outputs/ratings/<run>/ratings.jsonl`
 One row per response × judge × repeat: `scenario_id`, `response_id`, `kind`, `judge`, `repeat`,
 `ratings_1to10` (`{"1": 7, …}`), `ratings` (rescaled `(x-1)/9`, in [0,1]), `reflection`, `judgment_raw`.

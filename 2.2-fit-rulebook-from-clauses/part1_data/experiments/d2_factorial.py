@@ -13,7 +13,7 @@ own design (D2-half); the full 8 cells are also the response pool for the k expe
 
     python experiments/d2_factorial.py --source pilot --out-name exp_D2 --limit 2   # smoke
     python experiments/d2_factorial.py --source pilot --out-name exp_D2
-then  python pipeline/judge.py --run-name exp_D2 --judges openai/gpt-4.1 google/gemini-4-argon
+then  python pipeline/judge.py --run-name exp_D2 --judges moonshotai/kimi-k3.1-pro google/gemini-4-argon
 
 Writes outputs/responses/<out-name>/responses.jsonl in the DATA_FORMAT.md format plus
 design fields: row `design`, `design_meta.moves`, `source_scenario_id`; response `cell`.
@@ -27,7 +27,7 @@ from concurrent.futures import ThreadPoolExecutor, as_completed
 from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "pipeline"))
-from common import LLM, check_models, extract_json, read_jsonl, write_jsonl  # noqa: E402
+from common import KIMI_MODEL, LLM, check_models, extract_json, read_jsonl, write_jsonl  # noqa: E402
 from make_responses import LENGTH_PROMPT, VALUE_PROMPT, WRITE_PROMPT, accept_clean, run_checks, words  # noqa: E402
 
 CELLS = ["".join(b) for b in itertools.product("01", repeat=3)]
@@ -156,7 +156,7 @@ def main():
     ap.add_argument("--source", default="pilot", help="Stage 2 scenario run to reuse")
     ap.add_argument("--out-name", default="exp_D2")
     ap.add_argument("--criteria", default="outputs/criteria/criteria_pilot.jsonl")
-    ap.add_argument("--writer-model", default="openai/gpt-4.1")
+    ap.add_argument("--writer-model", default=KIMI_MODEL)
     ap.add_argument("--checker-model", default="google/gemini-4-argon")
     ap.add_argument("--words", type=int, default=220)
     ap.add_argument("--check-orders", type=int, default=2)

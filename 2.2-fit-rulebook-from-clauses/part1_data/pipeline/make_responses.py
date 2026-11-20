@@ -36,7 +36,7 @@ import random
 from concurrent.futures import ThreadPoolExecutor, as_completed
 from pathlib import Path
 
-from common import LLM, check_models, extract_json, read_jsonl, write_jsonl
+from common import KIMI_MODEL, LLM, check_models, extract_json, read_jsonl, write_jsonl
 
 PLAN_PROMPT = """We are building a test set of advice requests. For each request we need several assistant replies that each recommend a different, definite course of action. Every one of them must be a recommendation a thoughtful, well-meaning advisor could genuinely give, and none should be the obvious right answer.
 
@@ -182,23 +182,32 @@ def validate_check(text: str, letters: list[str]) -> dict:
     return {"ratings": ratings, "obvious_best": best, "duplicates": dups, "value_language": vl, "note": str(obj.get("note", ""))}
 
 
-def run_checks(llm, args, scenario, committed, sid, round_tag) -> list[dict]:
-    """Leading check in --check-orders orders (a seeded shuffle, then its reverse)."""
+def reply_orders(committed, sid, count):
+    """Yield the seeded shuffle and its reverse with stable reply IDs and model-facing labels."""
     base = list(range(len(committed)))
     random.Random(sid).shuffle(base)
-    results = []
-    for o, order in enumerate([base, base[::-1]][:args.check_orders]):
+    for order in [base, base[::-1]][:count]:
         letters = [chr(65 + j) for j in range(len(order))]
         replies = "\n\n".join(f"=== Reply {L} ===\n{committed[i]['text']}" for L, i in zip(letters, order))
+        yield dict(zip(letters, [committed[i]["response_id"] for i in order])), replies
+
+
+def run_checks(llm, args, scenario, committed, sid, round_tag, *, system_message=None) -> list[dict]:
+    """Leading check in --check-orders orders (a seeded shuffle, then its reverse)."""
+    results = []
+    for o, (to_id, replies) in enumerate(reply_orders(committed, sid, args.check_orders)):
+        letters = list(to_id)
         prompt = CHECK_PROMPT.format(
             scenario=scenario, replies=replies, letters=", ".join(letters),
             rating_keys=", ".join(f'"{L}": <1-5>' for L in letters),
         )
+        messages = [{"role": "user", "content": prompt}]
+        if system_message is not None:
+            messages.insert(0, {"role": "system", "content": system_message})
         parsed = llm.chat(
-            args.checker_model, [{"role": "user", "content": prompt}], temperature=0, max_tokens=3000,
+            args.checker_model, messages, temperature=0, max_tokens=3000,
             tag=f"{round_tag}:{sid}:{o}", validate=lambda t, letters=letters: validate_check(t, letters),
         )
-        to_id = {L: committed[i]["response_id"] for L, i in zip(letters, order)}
         results.append({
             "order": [to_id[L] for L in letters],
             "defensible": {to_id[L]: v for L, v in parsed["ratings"].items()},
@@ -325,7 +334,7 @@ def main():
     ap.add_argument("--run-name", required=True, help="the Stage 2 run to read, e.g. smoke or pilot")
     ap.add_argument("--out-name", default=None, help="output folder under outputs/responses (default: the run name)")
     ap.add_argument("--criteria", default="outputs/criteria/criteria_pilot.jsonl")
-    ap.add_argument("--writer-model", default="openai/gpt-4.1")
+    ap.add_argument("--writer-model", default=KIMI_MODEL)
     ap.add_argument("--checker-model", default="google/gemini-4-argon", help="should differ from the writer")
     ap.add_argument("--natural-model", default=None, help="default: the writer model")
     ap.add_argument("--no-natural", action="store_true")

@@ -53,31 +53,46 @@ def usage_cost(folder, prefixes=None):
 def response_quality(resp_path, keep_rids=None):
     rows = [json.loads(l) for l in open(resp_path)]
     ob, lowdef, dup_pairs, pairs, words, cv = 0, 0, 0, 0, [], []
+    legacy_menus = 0
     n_resp = 0
+    anchored_menus = failed_menus = redundant_pairs = anchored_pairs = 0
     for r in rows:
         resps = [x for x in r["responses"] if x["kind"] == "committed" and (keep_rids is None or x["response_id"].split(":")[1] in keep_rids)]
         ids = {x["response_id"] for x in resps}
+        checks = r.get("checks") or []
+        has_quality_scores = bool(checks and "quality" in checks[0])
+        legacy_menus += not has_quality_scores
         if len(resps) < 2:
             continue
-        checks = r.get("checks") or []
-        ob += any(c["obvious_best"] in ids for c in checks if c.get("obvious_best"))
-        for x in resps:
-            d = [c["defensible"][x["response_id"]] for c in checks if x["response_id"] in c["defensible"]]
-            lowdef += bool(d) and np.mean(d) < 3
         k = len(resps)
-        pairs += k * (k - 1) / 2
-        dp = {tuple(sorted(p)) for c in checks for p in c["duplicates"] if set(p) <= ids}
-        dp |= {tuple(sorted([x["response_id"], y["response_id"]])) for x in r.get("removed_responses", []) for y in []}
-        dup_pairs += len(dp)
+        pair_count = k * (k - 1) // 2
+        if has_quality_scores:
+            anchored_menus += 1
+            failed_menus += all(not c["quality"]["passed"] for c in checks)
+            by_order = [{tuple(sorted(p)) for p in c["duplicates"] if set(p) <= ids} for c in checks]
+            redundant_pairs += len(set.intersection(*by_order))
+            anchored_pairs += pair_count
+        else:
+            ob += any(c.get("obvious_best") in ids for c in checks)
+            for reply in resps:
+                ratings = [c["defensible"][reply["response_id"]] for c in checks
+                           if reply["response_id"] in c["defensible"]]
+                lowdef += bool(ratings) and np.mean(ratings) < 3
+            n_resp += k
+            pairs += pair_count
+            dup_pairs += len({tuple(sorted(p)) for c in checks for p in c["duplicates"] if set(p) <= ids})
         w = [x["words"] for x in resps]
         words += w
         cv.append(np.std(w) / np.mean(w))
-        n_resp += k
-    n = len(rows)
-    return {"obvious_best_rate": round(ob / n, 2), "low_defensibility_share": round(lowdef / n_resp, 2),
+    stats = {"obvious_best_rate": round(ob / legacy_menus, 2) if legacy_menus else None,
+            "low_defensibility_share": round(lowdef / n_resp, 2) if n_resp else None,
             "duplicate_pair_rate": round(dup_pairs / pairs, 3) if pairs else None,
             "duplicates_removed": sum(len(r.get("removed_responses", [])) for r in rows),
             "mean_words": round(float(np.mean(words)), 0), "length_cv_within_scenario": round(float(np.mean(cv)), 3)}
+    if anchored_menus:
+        stats["menu_quality_failure_rate"] = round(failed_menus / anchored_menus, 2)
+        stats["interchangeable_pair_rate"] = round(redundant_pairs / anchored_pairs, 3)
+    return stats
 
 
 def quality(name):

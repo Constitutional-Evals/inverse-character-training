@@ -20,7 +20,7 @@ Design D1: pair-first scenarios.
     python experiments/d1_pair_first.py --out-name exp_D1 --n-pairs 24
     python pipeline/make_responses.py --run-name exp_D1 --no-natural
     python experiments/d1_pair_first.py --out-name exp_D1 --finalize
-    python pipeline/judge.py --run-name exp_D1 --judges openai/gpt-4.1 google/gemini-4-argon
+    python pipeline/judge.py --run-name exp_D1 --judges moonshotai/kimi-k3.1-pro google/gemini-4-argon
 """
 
 import argparse
@@ -34,7 +34,7 @@ from pathlib import Path
 
 HERE = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(HERE / "pipeline"))
-from common import LLM, check_models, extract_json, read_jsonl, write_jsonl  # noqa: E402
+from common import KIMI_MODEL, LLM, check_models, extract_json, read_jsonl, write_jsonl  # noqa: E402
 
 
 def load_vendor():
@@ -192,7 +192,7 @@ def main():
     ap = argparse.ArgumentParser()
     ap.add_argument("--out-name", default="exp_D1")
     ap.add_argument("--n-pairs", type=int, default=24)
-    ap.add_argument("--gen-model", default="openai/gpt-4.1")
+    ap.add_argument("--gen-model", default=KIMI_MODEL)
     ap.add_argument("--gate-model", default="x-ai/grok-4.7")
     ap.add_argument("--attempts", type=int, default=2, help="fresh candidates per pair until one passes the gate")
     ap.add_argument("--finalize", action="store_true")

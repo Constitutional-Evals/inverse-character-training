@@ -1,6 +1,6 @@
 # 2.2 Part 1: dataset and scoring (pilot)
 
-Stages: criteria → scenarios → k responses per scenario → judge ratings
+Stages: criteria → scenarios → five anchored responses per scenario → judge ratings
 (`rating[scenario][response][criterion]`). File formats for Part 2 are in `DATA_FORMAT.md`.
 
 | Path | What |
@@ -8,9 +8,9 @@ Stages: criteria → scenarios → k responses per scenario → judge ratings
 | `dataset/` | **the pilot dataset to share**: `criteria.jsonl` + `scenarios.jsonl` (scenarios with their criteria and responses); see `dataset/README.md` |
 | `data/recommended_78_criteria.csv` | Jash's 78-criterion shortlist |
 | `pipeline/select_criteria.py` | Stage 1: pick a diverse subset (default 15) |
-| `vendor/scenario_pipeline_10_24_26.py` | Anand's scenario pipeline, copied unchanged from `Constitutional-Evals/constitutions` (branch `massscenariogen`, `mass_scenario_gen/`) to pin the version |
-| `pipeline/run_scenarios.py` | Stage 2: runs that pipeline on the subset with a small budget |
-| `pipeline/make_responses.py` | Stage 3: k firm, length-matched responses per scenario, plus a leading-options check |
+| `vendor/constitutions` | Pinned Anand scenario generator in `Completed_Scenario_Generation/` |
+| `pipeline/run_scenarios.py` | Stage 2: generate from the pilot criteria or import Anand's benchmark export |
+| `experiments/anchored_extremes.py` | Stage 3: five criterion-anchored replies per scenario, plus menu checks |
 | `pipeline/judge.py` | Stage 4: EigenBench direct-rating judge, every response × every criterion, 1-10 |
 | `pipeline/common.py` | shared OpenRouter client with disk cache |
 | `pipeline/show_scenario.py` | pretty-print one scenario with its responses and score table |
@@ -23,6 +23,7 @@ All commands run from this folder (`part1_data/`).
 
 ## Setup
 ```
+git submodule update --init --recursive
 pip install -r requirements.txt
 export OPENROUTER_API_KEY=...
 ```
@@ -33,38 +34,68 @@ raised limit only pays for the unfinished calls.
 ```
 python pipeline/select_criteria.py --k 15
 ```
-An LLM first rates every criterion 1-5 for how broadly it applies to everyday requests
+Kimi K3.1 Pro first rates every criterion 1-5 for how broadly it applies to everyday requests
 (`outputs/criteria/applicability.jsonl`); only criteria rated 4 or higher are eligible. The
 15 most mutually different of those are then picked, at most one per tradition. Read the
 printed list. Options: `--min-applicability 3` (looser), `--exclude <criterion_id> ...`.
 
 ## Stage 2: scenarios
+The runner groups the pilot criteria by their source traditions so Anand's M3 can pick
+supplementary criteria across groups. It retains the numeric pilot IDs for response generation
+and scoring. For the exact 15 criteria from the published pilot, pass `--criteria dataset/criteria.jsonl`
+to the scenario, anchored-response, and rating commands.
+
 Smoke test first (a few candidates):
 ```
-python pipeline/run_scenarios.py --run-name smoke --budget 5 --max-api-calls 400
+python pipeline/run_scenarios.py --run-name smoke --budget 5 --quota 1 --max-api-calls 400
 ```
 Check `outputs/scenarios/smoke/generated_scenarios_rich.jsonl`, then the pilot:
 ```
-python pipeline/run_scenarios.py --run-name pilot --budget 40 --max-api-calls 3000
+python pipeline/run_scenarios.py --run-name pilot-anand --budget 40 --batch-size 5 --quota 2 --max-api-calls 3000
 ```
 
-## Stage 3: responses
+To generate for one group, pass `--target` with its constitution ID. Supply the
+target clauses and the other groups together in `--criteria` so M3 can use the
+wider pool. Keep pilot IDs consecutive across the file and pass that same file
+to the response and rating stages. For example, if the Goodness rows use IDs
+like `oct-goodness#1`:
+```sh
+python pipeline/run_scenarios.py --run-name goodness --budget 20 --criteria /path/to/pool.jsonl --target oct-goodness
 ```
-python pipeline/make_responses.py --run-name smoke
+
+Anand's benchmark and coverage reports are in `outputs/scenarios/<run>/exports/`. The budget
+is a candidate limit. The number of selected scenarios depends on quality and coverage.
+To import a labeled export from the same criterion pool without API calls, use
+`python pipeline/run_scenarios.py --run-name imported --benchmark /path/to/benchmark.json`.
+An export ZIP works too. Add `--target oct-goodness` when importing to give verified
+Goodness criteria first claim on the reply menu. Use a new run name for a different
+benchmark, target, or criterion pool, or when switching between import and generation.
+
+## Stage 3: anchored responses
 ```
-Per scenario: the scenario's plausible actions become 2-4 firm, mutually exclusive
-recommendations (hedges and obvious middle ways are made firm or dropped); one writer model
-writes a ~220-word reply for each with identical instructions and no moral or value language;
-a second model then checks the set in two orders for an obvious winner, weak options, duplicates
-and value language. Duplicates are removed; the other verdicts are recorded as notes only, since
-whether the criteria actually separate the replies is checked on the ratings in Stage 4.
-One extra "natural" reply (the model's own answer, no instructions) is stored per scenario.
-Options: `--writer-model`, `--checker-model`, `--words`, `--max-k`, `--no-natural`, `--limit N`.
+python experiments/anchored_extremes.py --source smoke --out-name smoke-anchored
+```
+Kimi K3.1 Pro sees the scenario, the verified criteria, and the rest of the supplied pool in
+separate sections. In a targeted run, verified target criteria get first claim on the five
+anchor slots, starting with any verified criteria the scenario was scheduled to test.
+Other verified criteria come next, then additional criteria that create
+natural tradeoffs. Kimi writes a ~220-word reply for each anchor. Gemini 4 Argon reviews the same five replies in a seeded shuffle and its reverse.
+In each order it makes two calls. One scores menu quality on Anand’s six dimensions.
+The other scores all ten pairs for overlap in advice and underlying tradeoff.
+Pairs scoring at least 75/100 in both orders qualify for repair. Kimi can clarify
+an anchor’s reason or a condition for acting even when the advice stays the same.
+
+An eligible menu gets one targeted repair and a full recheck. A confirmed quality
+failure or interchangeable pair still present at the final check holds the menu out
+of default scoring. See the [four-menu replay](reports/anchored_checker_replay.md).
+
+The runner reads scenario text directly from the source export. Use `--clean-from` explicitly
+to reuse text from an existing response run. Other options include `--model`,
+`--checker-model`, `--words`, `--no-length-fix`, and `--limit N`.
 
 ## Stage 4: ratings
 ```
-python pipeline/judge.py --run-name smoke
-python pipeline/judge.py --run-name pilot --judges openai/gpt-4.1 google/gemini-4-argon
+python pipeline/judge.py --run-name smoke-anchored --judges moonshotai/kimi-k3.1-pro google/gemini-4-argon
 ```
 EigenBench protocol (reflection, then 1-10 per criterion, one response per call), rescaled to
 [0,1]. Prints, per criterion, how much the ratings spread across a scenario's responses (where

@@ -1,61 +1,156 @@
-"""
-Stage 2: run Anand's scenario pipeline (vendor/scenario_pipeline_10_24_26.py, unchanged)
-on the pilot constitution, with a small budget.
-
-    python pipeline/run_scenarios.py --run-name smoke --budget 5 --max-api-calls 400
-    python pipeline/run_scenarios.py --run-name pilot --budget 50
-
-The pipeline's models, prompts and quality thresholds are left exactly as Anand set them;
-only the candidate budget and the API-call cap are changed here. Rerunning with the same
---run-name resumes from its cache. Use a new run name for a fresh run.
-
-Main output: outputs/scenarios/<run-name>/generated_scenarios_rich.jsonl (accepted
-scenarios with verified criteria, type, setting, intended tension and plausible actions).
-API usage per call: outputs/scenarios/<run-name>/api_usage.jsonl
-
-Needs OPENROUTER_API_KEY.
-"""
+"""Generate scenarios with Anand's pipeline or import its benchmark for Stage 3."""
 
 import argparse
-import importlib.util
 import sys
 from pathlib import Path
+from tempfile import TemporaryDirectory
 
-HERE = Path(__file__).resolve().parents[1]  # part1_data/
+from filelock import FileLock, Timeout
+
+from common import read_jsonl, write_jsonl
+
+
+HERE = Path(__file__).resolve().parents[1]
+ANAND_PIPELINE = HERE / "vendor/constitutions/Completed_Scenario_Generation"
+
+
+def pilot_constitutions(criteria_path):
+    """Keep the globally unique pilot IDs when grouping criteria for M3."""
+    criteria = sorted(read_jsonl(criteria_path), key=lambda row: row["pilot_id"])
+    if not criteria or [row["pilot_id"] for row in criteria] != list(range(1, len(criteria) + 1)):
+        raise ValueError("criteria pilot_ids must be 1..k")
+
+    groups = {}
+    for row in criteria:
+        tradition = row["criterion_id"].rsplit("#", 1)[0]
+        group = groups.setdefault(tradition, {"criteria": []})
+        group["criteria"].append({"id": row["pilot_id"], "text": row["criterion"]})
+    return {"constitutions": groups}
+
+
+def response_scenarios(bank, target=""):
+    rows = []
+    for row in bank:
+        relevance = row["relevance"]
+        target_ids = set(relevance.get(target, []))
+        scheduled_ids = target_ids.intersection(row.get("target_criteria") or ())
+        verified_ids = {key for ids in relevance.values() for key in ids}
+        verified_order = sorted(scheduled_ids) + sorted(target_ids - scheduled_ids) + sorted(verified_ids - target_ids)
+        rows.append({
+            "scenario_id": row["scenario_id"],
+            "scenario": row["scenario"],
+            "verified_criteria": verified_order,
+            "scenario_type": row.get("scenario_type"),
+        })
+    return rows
 
 
 def main():
-    ap = argparse.ArgumentParser()
-    ap.add_argument("--constitution", default=str(HERE / "outputs/criteria/constitution_pilot.json"))
-    ap.add_argument("--pipeline", default=str(HERE / "vendor/scenario_pipeline_10_24_26.py"))
-    ap.add_argument("--run-name", required=True)
-    ap.add_argument("--budget", type=int, required=True, help="number of candidate scenarios to generate")
-    ap.add_argument("--max-api-calls", type=int, default=1500)
-    ap.add_argument("--output-root", default=str(HERE / "outputs/scenarios"))
-    args = ap.parse_args()
+    parser = argparse.ArgumentParser(description=__doc__)
+    mode = parser.add_mutually_exclusive_group(required=True)
+    mode.add_argument("--budget", type=int, help="number of new scenario candidates to attempt")
+    mode.add_argument("--benchmark", type=Path, help="import a labeled Anand benchmark without API calls")
+    parser.add_argument("--criteria", type=Path, default=HERE / "outputs/criteria/criteria_pilot.jsonl")
+    parser.add_argument("--target", default="", help="target one group for generation or prioritize its verified IDs on import")
+    parser.add_argument("--existing", type=Path, help="existing Anand benchmark to extend with --budget")
+    parser.add_argument("--run-name", required=True)
+    parser.add_argument("--output-root", type=Path, default=HERE / "outputs/scenarios")
+    parser.add_argument("--max-api-calls", type=int, default=1500)
+    parser.add_argument("--batch-size", type=int)
+    parser.add_argument("--quota", type=int, help="coverage quota per input group")
+    parser.add_argument("--min-criteria", type=int, help="coverage breadth target per input group")
+    args = parser.parse_args()
 
-    if not Path(args.constitution).exists():
-        raise SystemExit(f"{args.constitution} not found. Run select_criteria.py first.")
+    if args.benchmark and args.existing:
+        parser.error("--existing is for generation with --budget")
+    if not (ANAND_PIPELINE / "modules/core.py").is_file():
+        parser.error("Initialize Anand's pinned checkout with git submodule update --init.")
 
-    spec = importlib.util.spec_from_file_location("scenario_pipeline", args.pipeline)
-    pipeline = importlib.util.module_from_spec(spec)
-    spec.loader.exec_module(pipeline)
+    sys.path.insert(0, str(ANAND_PIPELINE))
+    root = args.output_root / args.run_name
+    root.mkdir(parents=True, exist_ok=True)
+    try:
+        with FileLock(str(root / ".scenario-run.lock"), timeout=0):
+            run_scenarios(args, parser, root)
+    except Timeout:
+        parser.error("This scenario run is already in progress.")
 
-    gen = pipeline.CONFIG["generation"]
-    gen["candidate_budget"] = args.budget
-    if args.budget < gen["batch_size"]:  # keep the pipeline's own validity rules satisfied
-        gen["batch_size"] = args.budget
-    pipeline.CONFIG["runtime"]["max_api_calls"] = args.max_api_calls
 
-    print(f"Budget: {args.budget} candidates, at most {args.max_api_calls} API calls\n")
-    return pipeline.main([
-        args.constitution,
-        "--output-root", args.output_root,
-        "--run-name", args.run_name,
-        "--constitution-name", "pilot_criteria",
-        "--full-outputs",
-    ])
+def run_scenarios(args, parser, root):
+    from modules import config as cfg
+    from modules.core import atomic_json, digest, initialize_workspace, load_constitutions, load_existing_bank, read_json, slug
+
+    pool_path = root / "pilot_constitutions.json"
+    path = root / "generated_scenarios_rich.jsonl"
+    import_manifest = root / "benchmark_import.json"
+    has_generation_state = (root / "run_manifest.json").exists() or (root / "inputs").exists()
+    if args.benchmark and has_generation_state:
+        parser.error("This run name is already used for generation. Import under a new run name.")
+    if not args.benchmark and (import_manifest.exists() or (path.exists() and not has_generation_state)):
+        parser.error("This run name is already used for benchmark import. Generate under a new run name.")
+
+    pool = pilot_constitutions(args.criteria)
+    target = slug(args.target)
+    group_ids = sorted(slug(name) for name in pool["constitutions"])
+    if args.target and target not in group_ids:
+        parser.error(f"Unknown target constitution {args.target!r}. Available IDs: {', '.join(group_ids)}")
+    if pool_path.exists() and read_json(pool_path) != pool:
+        parser.error("The criteria differ from this run's saved pool. Use a new run name.")
+    if args.benchmark:
+        # Validate the incoming pool and benchmark before writing either into the run.
+        with TemporaryDirectory(dir=root) as directory:
+            proposed_pool = Path(directory) / pool_path.name
+            atomic_json(proposed_pool, pool)
+            const = load_constitutions(proposed_pool)
+        bank = load_existing_bank(args.benchmark, const)
+        if not bank or any(set(row["relevance"]) != set(const) for row in bank):
+            parser.error("--benchmark requires a benchmark export with criterion relevance labels")
+        rows = response_scenarios(bank, target)
+        identity = digest({"criteria": pool, "benchmark": bank, "target": target})
+        saved_import = read_json(import_manifest)
+        if saved_import is not None and saved_import["identity"] != identity:
+            parser.error("The benchmark or target differs from this run's saved import. Use a new run name.")
+        if saved_import is None and path.exists():
+            if not pool_path.exists() or read_jsonl(path) != rows:
+                parser.error("The benchmark or pool does not match this run's existing import. Use a new run name.")
+        if not pool_path.exists():
+            atomic_json(pool_path, pool)
+        if saved_import is None:
+            atomic_json(import_manifest, {
+                "identity": identity, "target_constitution": target, "scenario_count": len(rows),
+            })
+    else:
+        from modules.client import OpenRouterClient, obtain_openrouter_key
+        from modules.pipeline import run_pipeline
+        from modules.stages import show_coverage
+
+        if not pool_path.exists():
+            atomic_json(pool_path, pool)
+        cfg.CONSTITUTION_INPUT = str(pool_path)
+        cfg.TARGET_CONSTITUTION = target
+        cfg.EXISTING_BANK_INPUT = str(args.existing) if args.existing else ""
+        cfg.LOCAL_RUN_PARENT = str(args.output_root)
+        cfg.RUN_NAME = args.run_name
+        cfg.MAX_NEW_ATTEMPTS = args.budget
+        cfg.MAX_API_REQUESTS = args.max_api_calls
+        if args.batch_size is not None:
+            cfg.GENERATION_BATCH_SIZE = args.batch_size
+        if args.quota is not None:
+            cfg.SCENARIO_QUOTA = args.quota
+        if args.min_criteria is not None:
+            cfg.MIN_DISTINCT_CRITERIA = args.min_criteria
+
+        root, const, existing = initialize_workspace()
+        results = run_pipeline(root, const, existing, OpenRouterClient(root, obtain_openrouter_key()))
+        show_coverage(results["report"])
+        rows = response_scenarios(results["existing"] + results["selected"], target)
+
+    with TemporaryDirectory(dir=root) as directory:
+        temporary = Path(directory) / path.name
+        write_jsonl(temporary, rows)
+        temporary.replace(path)
+    print(f"Wrote {len(rows)} scenarios to {path}")
 
 
 if __name__ == "__main__":
-    sys.exit(main())
+    main()

@@ -1,3 +1,5 @@
 openai>=1.40
 numpy
 requests
+scipy>=1.11
+filelock>=3.12

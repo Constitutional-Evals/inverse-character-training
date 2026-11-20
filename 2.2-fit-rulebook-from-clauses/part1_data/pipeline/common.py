@@ -11,6 +11,13 @@ import requests
 from openai import OpenAI
 
 OPENROUTER = "https://openrouter.ai/api/v1"
+KIMI_MODEL = "moonshotai/kimi-k3.1-pro"
+
+
+def model_options(model):
+    if model == KIMI_MODEL:
+        return {"reasoning": {"effort": "low", "exclude": True}}
+    return {}
 
 
 def api_key() -> str:
@@ -69,9 +76,11 @@ class LLM:
         """Return the reply text, or validate(text) if given. validate raises ValueError on a bad reply,
         which triggers a retry; only replies that pass are cached. tag keeps otherwise-identical
         requests apart (for example repeat ratings)."""
-        key = hashlib.sha256(
-            json.dumps([model, messages, temperature, max_tokens, tag], sort_keys=True).encode()
-        ).hexdigest()[:32]
+        options = model_options(model)
+        cache_parts = [model, messages, temperature, max_tokens, tag]
+        if options:
+            cache_parts.append(options)
+        key = hashlib.sha256(json.dumps(cache_parts, sort_keys=True).encode()).hexdigest()[:32]
         path = self.cache_dir / f"{key}.json"
         if path.exists():
             text = json.loads(path.read_text(encoding="utf-8"))["text"]
@@ -86,7 +95,7 @@ class LLM:
             try:
                 out = self.client.chat.completions.create(
                     model=model, messages=messages, temperature=temperature, max_tokens=max_tokens,
-                    extra_body={"usage": {"include": True}},
+                    extra_body={"usage": {"include": True}, **options},
                 )
             except Exception as exc:  # network errors, rate limits, provider errors
                 last = f"{type(exc).__name__}: {str(exc)[:200]}"
