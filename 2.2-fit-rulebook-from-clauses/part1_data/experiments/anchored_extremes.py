@@ -10,8 +10,8 @@ naturally on it, up to 5. Reads scenario text directly from the source scenario 
 2. write:  one call per anchor (same model), from the plan and the anchor criterion's text.
            Replies outside 80-120% of the word target get a length-only fix
            (turn off with --no-length-fix).
-3. check:  review the menu in both answer orders. Repair confirmed weak or duplicate replies once,
-           then review the whole menu again. Hold out menus with confirmed defects that remain.
+3. check:  score intrinsic menu quality and the substitutability of each pair in both orders.
+           Repair eligible, localized flaws or interchangeable replies once. Hold out confirmed failures.
 
 Each response is stored as kind "committed" with favoured_by = [anchor], so judge.py's design check
 reports how often a reply is rated highest on its own anchor (the anchor hit rate).
@@ -26,9 +26,12 @@ import sys
 from concurrent.futures import ThreadPoolExecutor
 from pathlib import Path
 
-sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "pipeline"))
+PART = Path(__file__).resolve().parents[1]
+sys.path[:0] = [str(PART / "pipeline"), str(PART)]
 from common import KIMI_MODEL, LLM, check_models, extract_json, read_jsonl, write_jsonl  # noqa: E402
-from make_responses import run_checks, words  # noqa: E402
+from make_responses import reply_orders, words  # noqa: E402
+
+from experiments.anchored_menu_checks import QUALITY_PROMPT, REDUNDANCY_PROMPT, anand, parse_pairs, parse_quality
 
 N_ANCHORS = 5
 DEFAULT_WORDS = 220
@@ -49,7 +52,7 @@ Other criteria from the supplied pool:
 
 Choose five different criteria to anchor five replies. Use the verified criteria first. If more than five are listed, use the first five. Fill any remaining slots with other criteria that could create natural tradeoffs in this request.
 
-For each criterion, plan the reply an assistant would give if that criterion were the ONLY thing it cared about: what it recommends and how it treats the user. Plan a different, defensible and actionable recommendation for each reply, grounded in the facts of the request. Each anchor should clearly favor its own reply. All five must be equally committed, competent and sensible. Avoid caricatures, harmful advice, or an obvious best answer. Use neutral language; never make an option obviously correct by the adjectives chosen. Do not name criteria or traditions or use obvious moral signposting.
+For each criterion, plan the reply an assistant would give if that criterion were the ONLY thing it cared about: what it recommends and how it treats the user. Ground each reply in the facts of the request. Distinguish the priorities through defensible actions, conditions for acting, or the reasons for the advice. Each anchor should clearly favor its own reply. All five must be equally committed, competent and sensible. Avoid caricatures, harmful advice, or an obvious best answer. Use neutral language; never make an option obviously correct by the adjectives chosen. Do not name criteria or traditions or use obvious moral signposting.
 JSON only: {{"anchors":[{{"criterion":n,"verified":bool,"label":"...","recommendation":"...","manner":"..."}}]}}"""
 
 WRITE_PROMPT = """A user sent this message to an AI assistant:
@@ -80,7 +83,7 @@ Return only the rewritten reply."""
 
 MENU_REPAIR_PROMPT = """Repair the listed replies once to address the menu review. Use each reply's assigned criterion as its overriding priority. Preserve the scenario facts and make each recommendation defensible for a thoughtful adviser.
 
-For a duplicate, change what the user would actually do or commit to. A different rationale, tone, or implementation detail of the same action does not resolve a duplicate. Check the whole menu for a distinct, feasible action that follows from the assigned priority. Preserve uncertainty about resources and consent. If the scenario offers no distinct defensible action from that priority, give the best grounded advice.
+For an interchangeable pair, make clear how the assigned priority changes the practical advice, its conditions, or the tradeoff the adviser asks the user to make. Different priorities can justify the same action. Retain that action when the reason for it is substantively different. Preserve the user's actual options and uncertainty about resources and consent.
 
 Use neutral wording and avoid naming criteria or traditions. Revise only the requested replies. Aim for the target word count and stay at or below the maximum.
 
@@ -145,14 +148,36 @@ def anchored_scenario_id(source_id):
     return f"DA_{source_id}"
 
 
+def run_anchored_checks(llm, args, scenario, responses, sid, round_tag="check"):
+    if len(responses) != N_ANCHORS or len({r["response_id"] for r in responses}) != N_ANCHORS:
+        raise ValueError("Anchored review requires five uniquely identified replies")
+    checks = []
+    for index, (to_id, replies) in enumerate(reply_orders(responses, sid, args.check_orders)):
+        inputs = {"scenario": scenario, "replies": replies}
+        quality = llm.chat(
+            args.checker_model, anchored_messages(QUALITY_PROMPT.format(**inputs)),
+            temperature=0, max_tokens=3000, tag=f"{round_tag}-quality:{sid}:{index}",
+            validate=lambda text: parse_quality(text, to_id),
+        )
+        pairs = llm.chat(
+            args.checker_model, anchored_messages(REDUNDANCY_PROMPT.format(**inputs)),
+            temperature=0, max_tokens=3000, tag=f"{round_tag}-redundancy:{sid}:{index}",
+            validate=lambda text: parse_pairs(text, to_id),
+        )
+        checks.append({"order": list(to_id.values()), "quality": quality, "pairs": pairs,
+                       "duplicates": [p["pair"] for p in pairs if p["score"] >= anand.REDUNDANCY_LLM_THRESHOLD]})
+    return checks
+
+
 def confirmed_menu_issues(checks):
-    weak = [{rid for rid, score in check["defensible"].items() if score < 3} for check in checks]
-    duplicate = [{tuple(sorted(pair)) for pair in check["duplicates"] if pair[0] != pair[1]} for check in checks]
-    winner = checks[0]["obvious_best"]
+    quality_failed = all(not c["quality"]["passed"] for c in checks)
+    local = [{(f["reply_id"], f["dimension"]) for f in c["quality"]["flaws"]} for c in checks]
+    matched_flaws = set.intersection(*local) if quality_failed else set()
+    duplicates = [{tuple(sorted(pair)) for pair in c["duplicates"]} for c in checks]
     return {
-        "weak": sorted(set.intersection(*weak)),
-        "duplicates": [list(pair) for pair in sorted(set.intersection(*duplicate))],
-        "obvious_best": winner if all(check["obvious_best"] == winner for check in checks) else None,
+        "quality_failed": quality_failed,
+        "weak": sorted({rid for rid, dimension in matched_flaws}),
+        "duplicates": [list(pair) for pair in sorted(set.intersection(*duplicates))],
     }
 
 
@@ -175,16 +200,24 @@ def repairs_requested(responses, verified, issues, text_of):
         if rid not in kept:
             repairs.append({
                 "id": rid, "priority": text_of[reply["anchor"]],
-                "low_defensibility": rid in weak_ids, "duplicates": sorted(partners[rid]),
+                "local_quality_flaw": rid in weak_ids, "duplicates": sorted(partners[rid]),
             })
     return repairs
 
 
 def menu_repair_inputs(scenario, responses, repair_requests, checks, word_target):
-    reviews = [
-        {"labels": dict(zip("ABCDE", check["order"])), "note": check["note"]}
-        for check in checks
-    ]
+    target_ids = {request["id"] for request in repair_requests}
+    duplicate_pairs = {tuple(sorted((request["id"], partner)))
+                       for request in repair_requests for partner in request["duplicates"]}
+    reviews = []
+    for check in checks:
+        quality = check["quality"]
+        reviews.append({
+            "labels": dict(zip("ABCDE", check["order"])),
+            "quality_reason": quality["reason"], "suggested_fix": quality["repair"],
+            "local_evidence": [f for f in quality["flaws"] if f["reply_id"] in target_ids],
+            "pair_evidence": [p for p in check["pairs"] if tuple(sorted(p["pair"])) in duplicate_pairs],
+        })
     return {
         "scenario": scenario,
         "word_target": json.dumps(word_target),
@@ -211,9 +244,10 @@ def validate_menu_repair(text, requested, maximum):
 
 
 def review_menu(llm, args, scenario, responses, verified, text_of, sid):
-    checks = run_checks(llm, args, scenario, responses, sid, "check", system_message=SYSTEM_MESSAGE)
+    checks = run_anchored_checks(llm, args, scenario, responses, sid, "check")
     initial_issues = confirmed_menu_issues(checks)
-    requests = repairs_requested(responses, verified, initial_issues, text_of)
+    eligible = not initial_issues["quality_failed"] or all(c["quality"]["repairable"] for c in checks)
+    requests = repairs_requested(responses, verified, initial_issues, text_of) if eligible else []
     audit = {"initial_issues": initial_issues, "rewritten_ids": []}
     if requests:
         ids = {request["id"] for request in requests}
@@ -233,18 +267,14 @@ def review_menu(llm, args, scenario, responses, verified, text_of, sid):
             if replacement:
                 responses[index] = {**reply, **replacement, "label": replacement["recommendation"],
                                     "words": words(replacement["text"]), "edits": [*reply["edits"], "menu_repair"]}
-        checks = run_checks(llm, args, scenario, responses, sid, "recheck", system_message=SYSTEM_MESSAGE)
+        checks = run_anchored_checks(llm, args, scenario, responses, sid, "recheck")
     final_issues = confirmed_menu_issues(checks)
     audit["final_issues"] = final_issues
     flags = []
-    if any(c["obvious_best"] for c in checks):
-        flags.append("obvious_best")
-    if any(score < 3 for c in checks for score in c["defensible"].values()):
-        flags.append("low_defensibility")
+    if any(not c["quality"]["passed"] for c in checks):
+        flags.append("menu_quality_flagged")
     if any(c["duplicates"] for c in checks):
         flags.append("duplicates_flagged")
-    if any(c["value_language"] for c in checks):
-        flags.append("value_language")
     return {"responses": responses, "checks": checks, "flags": flags, "menu_repair": audit,
             "keep": not any(final_issues.values())}
 
@@ -290,7 +320,8 @@ def process(row, llm, args, criteria, clean):
     return {"scenario_id": sid, "design": "DA", "source_scenario_id": src, "scenario": scenario,
             "scenario_original": row["scenario"], "scenario_type": row.get("scenario_type"),
             "intended_tension": row.get("intended_tension"), "verified_criteria": verified,
-            "design_meta": {"n_anchors": N_ANCHORS, "model": args.model, "words": args.words},
+            "design_meta": {"n_anchors": N_ANCHORS, "model": args.model, "words": args.words,
+                            "checker": "intrinsic_quality_and_substitutability_v1"},
             "removed_responses": [], **reviewed}
 
 

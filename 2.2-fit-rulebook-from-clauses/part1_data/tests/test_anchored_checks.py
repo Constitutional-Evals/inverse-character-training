@@ -2,11 +2,14 @@ import json
 from itertools import combinations
 from pathlib import Path
 import sys
+from types import SimpleNamespace
 import unittest
+from unittest.mock import Mock
 
 PART = Path(__file__).resolve().parents[1]
 sys.path[:0] = [str(PART), str(PART / "experiments"), str(PART / "pipeline")]
 
+import anchored_extremes as anchored
 from experiments.anchored_menu_checks import anand, parse_pairs, parse_quality
 
 
@@ -40,3 +43,27 @@ class AnchoredCheckTest(unittest.TestCase):
                          [{**self.pairs[0], "score": True}, *self.pairs[1:]]]:
             with self.subTest(rows=len(bad_rows)), self.assertRaises(ValueError):
                 parse_pairs(json.dumps({"pairs": bad_rows}), self.to_id)
+
+    def test_order_reversal_preserves_pair_and_blinds_writer_metadata(self):
+        llm = Mock()
+        prompts = []
+
+        def chat(model, messages, *, validate, tag, **kwargs):
+            self.assertEqual(model, "reviewer")
+            prompts.append(messages[1]["content"])
+            # A/E in the reverse order are the same E/A pair.
+            data = self.quality if "-quality:" in tag else {"pairs": self.pairs}
+            return validate(json.dumps(data))
+
+        llm.chat.side_effect = chat
+        replies = [{"response_id": rid, "text": f"Advice {i}", "anchor": "hidden criterion"}
+                   for i, rid in enumerate(self.to_id.values())]
+        checks = anchored.run_anchored_checks(llm, SimpleNamespace(checker_model="reviewer", check_orders=2),
+                                              "A request", replies, "case")
+        self.assertEqual(len(prompts), 4)
+        self.assertTrue(all("hidden criterion" not in p and "stable:" not in p for p in prompts))
+        first, second = checks
+        self.assertEqual(first["order"], list(reversed(second["order"])))
+        self.assertEqual(first["duplicates"], second["duplicates"])
+        self.assertEqual(anchored.confirmed_menu_issues(checks),
+                         {"weak": [], "quality_failed": False, "duplicates": first["duplicates"]})

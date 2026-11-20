@@ -14,14 +14,18 @@ import anchored_extremes as anchored
 IDS = ["A", "B", "C", "D", "E"]
 
 
-def check(*, weak=(), duplicates=(), winner=None, value=()):
+def check(*, weak=(), duplicates=(), menu_failure=False, repairable=True, dimension="coherence"):
     return {
         "order": IDS,
-        "defensible": {rid: 2 if rid in weak else 4 for rid in IDS},
+        "quality": {
+            "passed": not (weak or menu_failure), "repairable": repairable,
+            "reason": "Review of the whole menu.", "repair": "Fix cited flaws.",
+            "flaws": [{"reply_id": rid, "dimension": dimension, "evidence": "Assumed an unavailable option."}
+                      for rid in weak],
+        },
         "duplicates": list(duplicates),
-        "obvious_best": winner,
-        "value_language": list(value),
-        "note": "Some options recommend the same action." if duplicates else "",
+        "pairs": [{"pair": list(pair), "score": 85, "reason": "Same advice and same tradeoff."}
+                  for pair in duplicates],
     }
 
 
@@ -38,7 +42,7 @@ class MenuRepairTest(unittest.TestCase):
 
     def review(self, initial, revised=None):
         rounds = [initial] if revised is None else [initial, revised]
-        with patch.object(anchored, "run_checks", side_effect=rounds) as reviewer:
+        with patch.object(anchored, "run_anchored_checks", side_effect=rounds) as reviewer:
             outcome = anchored.review_menu(
                 self.llm, self.args, "Help me decide.", self.replies, [2], self.criteria, "case"
             )
@@ -58,6 +62,9 @@ class MenuRepairTest(unittest.TestCase):
                     self.assertEqual([(t["id"], t["priority"]) for t in targets],
                                      [("A", "Criterion 1"), ("C", "Criterion 3")])
                     self.assertEqual(targets[0]["duplicates"], ["B"])
+                    notes = json.loads(user_prompt.split("<reviewer_notes>\n", 1)[1].split("\n</reviewer_notes>", 1)[0])
+                    self.assertEqual(notes[0]["pair_evidence"][0]["reason"], "Same advice and same tradeoff.")
+                    self.assertEqual([f["reply_id"] for f in notes[0]["local_evidence"]], ["C"])
                     return validate(json.dumps({"repairs": [
                         {"id": rid, "recommendation": f"Changed {rid}", "text": f"Repaired reply {rid}."}
                         for rid in ["A", "C"]
@@ -76,25 +83,32 @@ class MenuRepairTest(unittest.TestCase):
                 self.assertEqual(outcome["checks"], revised)
                 self.assertEqual(outcome["keep"], expected_keep)
 
-    def test_order_disagreement_and_value_flags_remain_inspectable(self):
-        raw = [
-            check(weak=["A"], duplicates=[["A", "B"]], winner="B", value=["D"]),
-            check(weak=["C"], duplicates=[["C", "D"]], winner="E"),
-        ]
+    def test_order_disagreements_remain_inspectable(self):
+        raw = [check(weak=["A"], duplicates=[["A", "B"]]), check(duplicates=[["C", "D"]])]
         outcome, calls = self.review(raw)
         self.llm.chat.assert_not_called()
         self.assertEqual(len(calls), 1)
         self.assertTrue(outcome["keep"])
         self.assertEqual(outcome["checks"], raw)
-        self.assertCountEqual(outcome["flags"],
-                              ["obvious_best", "low_defensibility", "duplicates_flagged", "value_language"])
+        self.assertCountEqual(outcome["flags"], ["menu_quality_flagged", "duplicates_flagged"])
 
-    def test_clean_menu_and_consensus_winner_need_no_rewrite(self):
-        for winner, expected_keep in [(None, True), ("A", False)]:
-            with self.subTest(winner=winner):
-                outcome, calls = self.review([check(winner=winner), check(winner=winner)])
+    def test_confirmed_menu_failure_without_confirmed_local_defect_is_held_without_repair(self):
+        for raw in [
+            [check(menu_failure=True), check(menu_failure=True)],
+            [check(weak=["A"]), check(weak=["A"], dimension="naturalness")],
+            [check(weak=["A"], repairable=False, duplicates=[["C", "D"]]),
+             check(weak=["A"], duplicates=[["C", "D"]])],
+        ]:
+            with self.subTest(raw=raw):
+                outcome, calls = self.review(raw)
                 self.assertEqual(len(calls), 1)
-                self.assertEqual(outcome["keep"], expected_keep)
+                self.assertFalse(outcome["keep"])
+                self.llm.chat.assert_not_called()
+
+    def test_clean_menu_is_retained_without_repair(self):
+        outcome, calls = self.review([check(), check()])
+        self.assertTrue(outcome["keep"])
+        self.assertEqual(len(calls), 1)
         self.llm.chat.assert_not_called()
 
     def test_repair_validation_rejects_missing_extra_duplicate_and_overlong_replies(self):
