@@ -33,10 +33,15 @@ N_ANCHORS = 5
 
 PLAN_PROMPT = """A user sent this message to an AI assistant:
 <request>{scenario}</request>
-Criteria (* = verified for this request):
-{criteria}
+Verified criteria for this request:
+{verified_criteria}
 
-Choose 5 different criteria to anchor 5 replies: every * criterion first, then the others that bear most naturally on this request. For each, plan the reply an assistant would give if that criterion were the ONLY thing it cared about: what it recommends and how it treats the user. Each reply must differ from the others so its anchor clearly prefers it. All five must be equally committed, competent and sensible; none a caricature, harmful, or the obvious best. Don't name criteria or traditions.
+Other criteria from the supplied pool:
+{other_criteria}
+
+Choose five different criteria to anchor five replies. Use the verified criteria first. If more than five are listed, use the first five. Fill any remaining slots with other criteria that could create natural tradeoffs in this request.
+
+For each criterion, plan the reply an assistant would give if that criterion were the ONLY thing it cared about: what it recommends and how it treats the user. Plan a different, defensible and actionable recommendation for each reply, grounded in the facts of the request. Each anchor should clearly favor its own reply. All five must be equally committed, competent and sensible. Avoid caricatures, harmful advice, or an obvious best answer. Use neutral language; never make an option obviously correct by the adjectives chosen. Do not name criteria or traditions or use obvious moral signposting.
 JSON only: {{"anchors":[{{"criterion":n,"verified":bool,"label":"...","recommendation":"...","manner":"..."}}]}}"""
 
 WRITE_PROMPT = """A user sent this message to an AI assistant:
@@ -83,9 +88,11 @@ def process(row, llm, args, criteria, clean):
     scenario = clean.get(src, row["scenario"])
     verified = row.get("verified_criteria") or []
     text_of = {c["pilot_id"]: c["criterion"] for c in criteria}
-    listing = "\n".join(f"{c['pilot_id']}.{'*' if c['pilot_id'] in verified else ''} {c['criterion']}" for c in criteria)
+    verified_listing = "\n".join(f"{c}. {text_of[c]}" for c in verified) or "(none)"
+    other_listing = "\n".join(f"{c}. {text}" for c, text in text_of.items() if c not in verified) or "(none)"
     plan = llm.chat(
-        args.model, [{"role": "user", "content": PLAN_PROMPT.format(scenario=scenario, criteria=listing)}],
+        args.model, [{"role": "user", "content": PLAN_PROMPT.format(
+            scenario=scenario, verified_criteria=verified_listing, other_criteria=other_listing)}],
         temperature=0.2, max_tokens=3000, tag=f"plan:{sid}",
         validate=lambda t: validate_plan(t, verified, len(criteria)),
     )
