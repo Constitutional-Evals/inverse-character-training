@@ -10,7 +10,8 @@ naturally on it, up to 5. Reads scenario text directly from the source scenario 
 2. write:  one call per anchor (same model), from the plan and the anchor criterion's text.
            Replies outside 80-120% of the word target get a length-only fix
            (turn off with --no-length-fix).
-3. check:  the shared checker (obvious best, defensibility, duplicates, value language), notes only.
+3. check:  review the menu in both answer orders. Repair confirmed weak or duplicate replies once,
+           then review the whole menu again. Hold out menus with confirmed defects that remain.
 
 Each response is stored as kind "committed" with favoured_by = [anchor], so judge.py's design check
 reports how often a reply is rated highest on its own anchor (the anchor hit rate).
@@ -77,6 +78,29 @@ LENGTH_PROMPT = """Rewrite this reply once. Aim for the target word count and st
 Return only the rewritten reply."""
 
 
+MENU_REPAIR_PROMPT = """Repair the listed replies once to address the menu review. Use each reply's assigned criterion as its overriding priority. Preserve the scenario facts and make each recommendation defensible for a thoughtful adviser.
+
+For a duplicate, change what the user would actually do or commit to. A different rationale, tone, or implementation detail of the same action does not resolve a duplicate. Check the whole menu for a distinct, feasible action that follows from the assigned priority. Preserve uncertainty about resources and consent. If the scenario offers no distinct defensible action from that priority, give the best grounded advice.
+
+Use neutral wording and avoid naming criteria or traditions. Revise only the requested replies. Aim for the target word count and stay at or below the maximum.
+
+<message>
+{scenario}
+</message>
+<word_target>{word_target}</word_target>
+<menu>
+{menu}
+</menu>
+<repairs_requested>
+{targets}
+</repairs_requested>
+<reviewer_notes>
+{notes}
+</reviewer_notes>
+
+Return one JSON object with only the requested replacements: {{"repairs":[{{"id":"...","recommendation":"...","text":"..."}}]}}"""
+
+
 def anchored_messages(prompt):
     return [
         {"role": "system", "content": SYSTEM_MESSAGE},
@@ -121,6 +145,110 @@ def anchored_scenario_id(source_id):
     return f"DA_{source_id}"
 
 
+def confirmed_menu_issues(checks):
+    weak = [{rid for rid, score in check["defensible"].items() if score < 3} for check in checks]
+    duplicate = [{tuple(sorted(pair)) for pair in check["duplicates"] if pair[0] != pair[1]} for check in checks]
+    winner = checks[0]["obvious_best"]
+    return {
+        "weak": sorted(set.intersection(*weak)),
+        "duplicates": [list(pair) for pair in sorted(set.intersection(*duplicate))],
+        "obvious_best": winner if all(check["obvious_best"] == winner for check in checks) else None,
+    }
+
+
+def repairs_requested(responses, verified, issues, text_of):
+    ranks = {criterion: index for index, criterion in enumerate(verified)}
+    ranked = sorted(responses, key=lambda reply: ranks.get(reply["anchor"], len(ranks)))
+    partners = {reply["response_id"]: set() for reply in responses}
+    for first, second in issues["duplicates"]:
+        partners[first].add(second)
+        partners[second].add(first)
+    weak_ids = set(issues["weak"])
+    kept = set()
+    for reply in ranked:
+        rid = reply["response_id"]
+        if rid not in weak_ids and not partners[rid] & kept:
+            kept.add(rid)
+    repairs = []
+    for reply in ranked:
+        rid = reply["response_id"]
+        if rid not in kept:
+            repairs.append({
+                "id": rid, "priority": text_of[reply["anchor"]],
+                "low_defensibility": rid in weak_ids, "duplicates": sorted(partners[rid]),
+            })
+    return repairs
+
+
+def menu_repair_inputs(scenario, responses, repair_requests, checks, word_target):
+    reviews = [
+        {"labels": dict(zip("ABCDE", check["order"])), "note": check["note"]}
+        for check in checks
+    ]
+    return {
+        "scenario": scenario,
+        "word_target": json.dumps(word_target),
+        "menu": json.dumps([{"id": reply["response_id"], "text": reply["text"]} for reply in responses], indent=2, ensure_ascii=False),
+        "targets": json.dumps(repair_requests, indent=2, ensure_ascii=False),
+        "notes": json.dumps(reviews, indent=2, ensure_ascii=False),
+    }
+
+
+def validate_menu_repair(text, requested, maximum):
+    replacements = {}
+    for repair in extract_json(text)["repairs"]:
+        rid = repair["id"]
+        if rid not in requested or rid in replacements:
+            raise ValueError(f"Unexpected or repeated reply ID: {rid}")
+        recommendation = repair["recommendation"].strip()
+        reply = repair["text"].strip()
+        if not recommendation or not reply or words(reply) > maximum:
+            raise ValueError(f"Missing recommendation, empty reply, or reply over the word cap: {rid}")
+        replacements[rid] = {"recommendation": recommendation, "text": reply}
+    if replacements.keys() != requested:
+        raise ValueError("Repair must cover exactly the requested replies")
+    return replacements
+
+
+def review_menu(llm, args, scenario, responses, verified, text_of, sid):
+    checks = run_checks(llm, args, scenario, responses, sid, "check", system_message=SYSTEM_MESSAGE)
+    initial_issues = confirmed_menu_issues(checks)
+    requests = repairs_requested(responses, verified, initial_issues, text_of)
+    audit = {"initial_issues": initial_issues, "rewritten_ids": []}
+    if requests:
+        ids = {request["id"] for request in requests}
+        target = reply_word_target(args.words)
+        inputs = menu_repair_inputs(scenario, responses, requests, checks, target)
+        replacements = llm.chat(
+            args.model, anchored_messages(MENU_REPAIR_PROMPT.format(**inputs)),
+            temperature=0.2, max_tokens=6500, tag=f"repair-menu:{sid}",
+            validate=lambda text: validate_menu_repair(text, ids, target["maximum"]),
+        )
+        original_replies = [reply for reply in responses if reply["response_id"] in ids]
+        audit.update(initial_checks=checks, before_replies=original_replies, repair_requests=requests,
+                     rewritten_ids=[reply["response_id"] for reply in original_replies])
+        responses = list(responses)
+        for index, reply in enumerate(responses):
+            replacement = replacements.get(reply["response_id"])
+            if replacement:
+                responses[index] = {**reply, **replacement, "label": replacement["recommendation"],
+                                    "words": words(replacement["text"]), "edits": [*reply["edits"], "menu_repair"]}
+        checks = run_checks(llm, args, scenario, responses, sid, "recheck", system_message=SYSTEM_MESSAGE)
+    final_issues = confirmed_menu_issues(checks)
+    audit["final_issues"] = final_issues
+    flags = []
+    if any(c["obvious_best"] for c in checks):
+        flags.append("obvious_best")
+    if any(score < 3 for c in checks for score in c["defensible"].values()):
+        flags.append("low_defensibility")
+    if any(c["duplicates"] for c in checks):
+        flags.append("duplicates_flagged")
+    if any(c["value_language"] for c in checks):
+        flags.append("value_language")
+    return {"responses": responses, "checks": checks, "flags": flags, "menu_repair": audit,
+            "keep": not any(final_issues.values())}
+
+
 def process(row, llm, args, criteria, clean):
     src = row["scenario_id"]
     sid = anchored_scenario_id(src)
@@ -158,21 +286,12 @@ def process(row, llm, args, criteria, clean):
                      "recommendation": a["recommendation"], "manner": a["manner"], "from_action": None,
                      "favoured_by": [a["criterion"]], "text": text, "words": words(text),
                      "model": args.model, "edits": edits})
-    checks = run_checks(llm, args, scenario, resp, sid, "check", system_message=SYSTEM_MESSAGE)
-    flags = []
-    if any(c["obvious_best"] for c in checks):
-        flags.append("obvious_best")
-    if min(min(c["defensible"].values()) for c in checks) < 3:
-        flags.append("low_defensibility")
-    if any(c["duplicates"] for c in checks):
-        flags.append("duplicates_flagged")
-    if any(c["value_language"] for c in checks):
-        flags.append("value_language")
+    reviewed = review_menu(llm, args, scenario, resp, verified, text_of, sid)
     return {"scenario_id": sid, "design": "DA", "source_scenario_id": src, "scenario": scenario,
             "scenario_original": row["scenario"], "scenario_type": row.get("scenario_type"),
             "intended_tension": row.get("intended_tension"), "verified_criteria": verified,
             "design_meta": {"n_anchors": N_ANCHORS, "model": args.model, "words": args.words},
-            "responses": resp, "removed_responses": [], "checks": checks, "flags": flags, "keep": True}
+            "removed_responses": [], **reviewed}
 
 
 def main():
@@ -183,7 +302,7 @@ def main():
     ap.add_argument("--criteria", default="outputs/criteria/criteria_pilot.jsonl")
     ap.add_argument("--model", default=KIMI_MODEL, help="planner and writer")
     ap.add_argument("--checker-model", default="google/gemini-4-argon")
-    ap.add_argument("--check-orders", type=int, default=2)
+    ap.add_argument("--check-orders", type=int, choices=(1, 2), default=2)
     ap.add_argument("--words", type=int, default=DEFAULT_WORDS)
     ap.add_argument("--no-length-fix", dest="length_fix", action="store_false")
     ap.add_argument("--limit", type=int, default=0)
@@ -223,6 +342,8 @@ def main():
             flags[f] = flags.get(f, 0) + 1
     resp = [x for r in done for x in r["responses"]]
     summary = {"design": "DA", "scenarios": len(done), "responses": len(resp), "flags": flags,
+               "menus_repaired": sum(bool(r["menu_repair"]["rewritten_ids"]) for r in done),
+               "menus_held": sum(not r["keep"] for r in done),
                "anchors_verified": sum(x["anchor_verified"] for x in resp),
                "anchors_filled": sum(not x["anchor_verified"] for x in resp),
                "mean_words": round(sum(x["words"] for x in resp) / len(resp), 1),

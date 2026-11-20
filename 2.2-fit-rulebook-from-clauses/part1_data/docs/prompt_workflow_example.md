@@ -107,7 +107,9 @@ Each writing call receives one selected priority, its plan, and the target and m
 
 ## 4. Check the menu and score each reply
 
-Gemini 4 Argon receives the scenario and all five generated replies in a shuffled order and its reverse. The [menu checker](../pipeline/make_responses.py#L114) records defensibility scores and flags obvious winners, duplicate actions, and value-laden wording.
+Gemini 4 Argon receives the scenario and all five generated replies in a shuffled order and its reverse. The [menu checker](../pipeline/make_responses.py#L114) rates defensibility and flags obvious winners, duplicate actions, and value-laden wording.
+
+When both orders flag weak advice or the same duplicate pair, Kimi gets the scenario, full menu, review notes, and the intended priorities for the replies to repair. It gets one pass. The checker then sees the complete revised menu in both orders. The default rating run holds out menus with confirmed weak replies, duplicate actions, or an obvious winner.
 
 The [EigenBench prompts](../pipeline/judge.py#L31) receive the scenario, the supplied criteria, and one generated reply. The model reflects criterion by criterion, then returns one XML-tagged 1–10 score per criterion.
 
