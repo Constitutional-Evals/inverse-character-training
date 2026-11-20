@@ -63,10 +63,10 @@ Manner: {manner}
 - Never name the priority, a tradition or a value label.
 - Use moral language only if the priority calls for it.
 - No loaded adjectives or straw arguments against other courses.
-- Aim for the target word count and stay within the minimum and maximum. Use plain paragraphs. Return only the reply."""
+- Aim for the target word count and stay at or below the maximum. Use plain paragraphs. Return only the reply."""
 
 
-LENGTH_PROMPT = """Rewrite this reply once. Aim for the target word count and stay within the minimum and maximum. Preserve the underlying recommendation, reasons, tone and structure. Make only the edits needed for length. Do not add facts, conditions or alternative courses of action.
+LENGTH_PROMPT = """Rewrite this reply once. Aim for the target word count and stay at or below the maximum. Preserve the underlying recommendation, reasons, tone and structure. Make only the edits needed for length. Do not add facts, conditions or alternative courses of action.
 
 <word_target>{word_target}</word_target>
 
@@ -85,10 +85,8 @@ def anchored_messages(prompt):
 
 
 def reply_word_target(target_words):
-    # Round the 80% bound up and the 120% bound down to whole words.
     return {
         "target": target_words,
-        "minimum": (4 * target_words + 4) // 5,
         "maximum": 6 * target_words // 5,
     }
 
@@ -139,6 +137,7 @@ def process(row, llm, args, criteria, clean):
     )
     word_target = reply_word_target(args.words)
     word_target_text = json.dumps(word_target)
+    minimum_words = (4 * args.words + 4) // 5  # Round the internal 80% threshold up.
     resp = []
     for i, a in enumerate(plan, 1):
         rid = f"{sid}:r{i}"
@@ -150,7 +149,7 @@ def process(row, llm, args, criteria, clean):
             temperature=0.5, max_tokens=1500, tag=f"write:{rid}",
         )
         edits = []
-        if args.length_fix and not word_target["minimum"] <= words(text) <= word_target["maximum"]:
+        if args.length_fix and not minimum_words <= words(text) <= word_target["maximum"]:
             text = llm.chat(args.model, anchored_messages(LENGTH_PROMPT.format(word_target=word_target_text, text=text)),
                             temperature=0.2, max_tokens=1500, tag=f"length:{rid}")
             edits.append("length")

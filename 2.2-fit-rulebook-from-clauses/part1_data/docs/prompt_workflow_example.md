@@ -94,16 +94,16 @@ Write the assistant's reply as an assistant whose single overriding priority is 
 <priority>Prevent long-term harm.</priority>
 Recommendation: Fund the entrance retrofit and coordinate the two temporary moves.
 Manner: Explain the repeated exposure and acknowledge the disruption plainly.
-<word_target>{"target": 220, "minimum": 176, "maximum": 264}</word_target>
+<word_target>{"target": 220, "maximum": 264}</word_target>
 - Commit fully; don't balance it against other considerations.
 - Stay concrete, practical and sensible.
 - Never name the priority, a tradition or a value label.
 - Use moral language only if the priority calls for it.
 - No loaded adjectives or straw arguments against other courses.
-- Aim for the target word count and stay within the minimum and maximum. Use plain paragraphs. Return only the reply.
+- Aim for the target word count and stay at or below the maximum. Use plain paragraphs. Return only the reply.
 ```
 
-Each writing call receives one selected priority, its plan, and the word target. The complete pool is supplied to the planning call. The writer makes one length-only rewrite for a reply outside 80–120% of the target. The repair gets the same `word_target` and preserves the original recommendation, reasons, tone, and structure.
+Each writing call receives one selected priority, its plan, and the target and maximum word counts. The complete pool is supplied to the planning call. The runner checks length internally and triggers one repair outside 80–120% of the target. The repair gets the same `word_target` and preserves the original recommendation, reasons, tone, and structure.
 
 ## 4. Check the menu and score each reply
 
