@@ -92,7 +92,6 @@ of default scoring. See the [four-menu replay](reports/anchored_checker_replay.m
 The runner reads scenario text directly from the source export. Use `--clean-from` explicitly
 to reuse text from an existing response run. Other options include `--model`,
 `--checker-model`, `--words`, `--no-length-fix`, and `--limit N`.
-The [worked prompt example](docs/prompt_workflow_example.md) shows the complete planner and writer messages.
 
 ## Stage 4: ratings
 ```
