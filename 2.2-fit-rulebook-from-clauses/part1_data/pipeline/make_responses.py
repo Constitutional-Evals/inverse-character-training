@@ -182,7 +182,7 @@ def validate_check(text: str, letters: list[str]) -> dict:
     return {"ratings": ratings, "obvious_best": best, "duplicates": dups, "value_language": vl, "note": str(obj.get("note", ""))}
 
 
-def run_checks(llm, args, scenario, committed, sid, round_tag) -> list[dict]:
+def run_checks(llm, args, scenario, committed, sid, round_tag, *, system_message=None) -> list[dict]:
     """Leading check in --check-orders orders (a seeded shuffle, then its reverse)."""
     base = list(range(len(committed)))
     random.Random(sid).shuffle(base)
@@ -194,8 +194,11 @@ def run_checks(llm, args, scenario, committed, sid, round_tag) -> list[dict]:
             scenario=scenario, replies=replies, letters=", ".join(letters),
             rating_keys=", ".join(f'"{L}": <1-5>' for L in letters),
         )
+        messages = [{"role": "user", "content": prompt}]
+        if system_message is not None:
+            messages.insert(0, {"role": "system", "content": system_message})
         parsed = llm.chat(
-            args.checker_model, [{"role": "user", "content": prompt}], temperature=0, max_tokens=3000,
+            args.checker_model, messages, temperature=0, max_tokens=3000,
             tag=f"{round_tag}:{sid}:{o}", validate=lambda t, letters=letters: validate_check(t, letters),
         )
         to_id = {L: committed[i]["response_id"] for L, i in zip(letters, order)}
