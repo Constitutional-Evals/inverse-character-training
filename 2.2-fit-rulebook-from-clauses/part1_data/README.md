@@ -67,15 +67,17 @@ Anand's benchmark and coverage reports are in `outputs/scenarios/<run>/exports/`
 is a candidate limit. The number of selected scenarios depends on quality and coverage.
 To import a labeled export from the same criterion pool without API calls, use
 `python pipeline/run_scenarios.py --run-name imported --benchmark /path/to/benchmark.json`.
-An export ZIP works too. Use a separate run name for a different input pool.
+An export ZIP works too. Add `--target oct-goodness` when importing to give verified
+Goodness criteria first claim on the reply menu. Use a separate run name for a different input pool.
 
 ## Stage 3: anchored responses
 ```
 python experiments/anchored_extremes.py --source smoke --out-name smoke-anchored
 ```
 Kimi K3.1 Pro sees the scenario, the verified criteria, and the rest of the supplied pool in
-separate sections. It picks five anchors, using verified criteria first and filling remaining
-slots with criteria that create natural tradeoffs, then writes a ~220-word reply for each anchor. Gemini 4 Argon checks
+separate sections. In a targeted run, verified target criteria get first claim on the five
+anchor slots. Other verified criteria come next, then additional criteria that create
+natural tradeoffs. Kimi writes a ~220-word reply for each anchor. Gemini 4 Argon checks
 the full menu in two answer orders. Check results are stored as notes.
 
 The runner reads scenario text directly from the source export. Use `--clean-from` explicitly
