@@ -21,7 +21,7 @@ One fictional housing case through ICT PR #14. The scenario, criterion texts, an
 
 ## Prompt changes in PR #14
 
-The anchored planner receives verified criteria and the rest of the supplied pool in separate sections. It adopts Anand’s wording on natural tradeoffs, defensible actions, and neutral language. This PR sets Kimi K3.1 Pro as the default planner and writer, passes the supplied criteria into Anand’s generator as groups, and adds `--target`. The anchored runner reads the scenario export directly by default. An explicit `--clean-from` can select text from an existing response run. [Anchored runner diff](https://github.com/Constitutional-Evals/inverse-character-training/pull/14/files#diff-77f167a862a0cd7d85a7ab34c6c1f8dfe2993d072af01213e6e6e820fdfcb889)
+The anchored planner receives verified criteria and the rest of the supplied pool in separate sections. It adopts Anand’s wording on natural tradeoffs, defensible actions, and neutral language. The length prompt uses his one-rewrite framing and tells the writer to preserve the recommendation and reasons. This PR sets Kimi K3.1 Pro as the default planner and writer, passes the supplied criteria into Anand’s generator as groups, and adds `--target`. The anchored runner reads the scenario export directly by default. An explicit `--clean-from` can select text from an existing response run. [Anchored runner diff](https://github.com/Constitutional-Evals/inverse-character-training/pull/14/files#diff-77f167a862a0cd7d85a7ab34c6c1f8dfe2993d072af01213e6e6e820fdfcb889)
 
 ## 1. Shortlist contrasts from the supplied pool
 
@@ -96,7 +96,7 @@ Manner: Explain the repeated exposure and acknowledge the disruption plainly.
 - About 220 words, plain paragraphs. Return only the reply.
 ```
 
-Each writing call receives one selected priority and its plan. The complete pool is supplied to the planning call. Replies outside 80–120% of the word target receive the shared length-only rewrite.
+Each writing call receives one selected priority and its plan. The complete pool is supplied to the planning call. The writer makes one length-only rewrite for a reply outside 80–120% of the word target (176–264 words by default). The repair prompt preserves the original recommendation, reasons, tone, and structure.
 
 ## 4. Check the menu and score each reply
 

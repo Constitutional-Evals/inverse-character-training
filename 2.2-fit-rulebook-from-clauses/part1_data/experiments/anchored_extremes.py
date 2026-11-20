@@ -27,7 +27,7 @@ from pathlib import Path
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1] / "pipeline"))
 from common import KIMI_MODEL, LLM, check_models, extract_json, read_jsonl, write_jsonl  # noqa: E402
-from make_responses import LENGTH_PROMPT, run_checks, words  # noqa: E402
+from make_responses import run_checks, words  # noqa: E402
 
 N_ANCHORS = 5
 
@@ -56,6 +56,15 @@ Manner: {manner}
 - Use moral language only if the priority calls for it.
 - No loaded adjectives or straw arguments against other courses.
 - About {words} words, plain paragraphs. Return only the reply."""
+
+
+LENGTH_PROMPT = """Rewrite this reply once to about {words} words. Preserve the underlying recommendation, reasons, tone and structure. Make only the edits needed to reach the word target. Do not add facts, conditions or alternative courses of action.
+
+<reply>
+{text}
+</reply>
+
+Return only the rewritten reply."""
 
 
 def validate_plan(text, verified, n_criteria):
