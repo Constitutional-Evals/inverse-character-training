@@ -79,11 +79,15 @@ Kimi K3.1 Pro sees the scenario, the verified criteria, and the rest of the supp
 separate sections. In a targeted run, verified target criteria get first claim on the five
 anchor slots, starting with any verified criteria the scenario was scheduled to test.
 Other verified criteria come next, then additional criteria that create
-natural tradeoffs. Kimi writes a ~220-word reply for each anchor. Gemini 4 Argon checks
-the full menu in two answer orders. If both identify weak advice or duplicates, Kimi
-repairs the affected replies once using the same anchors. Gemini then checks the complete menu
-again. Menus with confirmed weak advice, duplicates, or an obvious winner are held out of
-default scoring. The response record includes the original edited replies and both sets of checks.
+natural tradeoffs. Kimi writes a ~220-word reply for each anchor. Gemini 4 Argon reviews the same five replies in a seeded shuffle and its reverse.
+In each order it makes two calls. One scores menu quality on Anand’s six dimensions.
+The other scores all ten pairs for overlap in advice and underlying tradeoff.
+Pairs scoring at least 75/100 in both orders qualify for repair. Kimi can clarify
+an anchor’s reason or a condition for acting even when the advice stays the same.
+
+An eligible menu gets one targeted repair and a full recheck. A confirmed quality
+failure or interchangeable pair still present at the final check holds the menu out
+of default scoring. See the [four-menu replay](reports/anchored_checker_replay.md).
 
 The runner reads scenario text directly from the source export. Use `--clean-from` explicitly
 to reuse text from an existing response run. Other options include `--model`,
