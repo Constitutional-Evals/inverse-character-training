@@ -77,7 +77,8 @@ python experiments/anchored_extremes.py --source smoke --out-name smoke-anchored
 ```
 Kimi K3.1 Pro sees the scenario, the verified criteria, and the rest of the supplied pool in
 separate sections. In a targeted run, verified target criteria get first claim on the five
-anchor slots. Other verified criteria come next, then additional criteria that create
+anchor slots, starting with any verified criteria the scenario was scheduled to test.
+Other verified criteria come next, then additional criteria that create
 natural tradeoffs. Kimi writes a ~220-word reply for each anchor. Gemini 4 Argon checks
 the full menu in two answer orders. Check results are stored as notes.
 

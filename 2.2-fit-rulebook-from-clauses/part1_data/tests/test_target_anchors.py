@@ -31,3 +31,13 @@ class TargetAnchorsTest(unittest.TestCase):
         with self.assertRaisesRegex(ValueError, "verified criteria"):
             validate_plan(plan([1, 2, 3, 4, 5]), verified, 6)
         self.assertEqual(response_scenarios(bank)[0]["verified_criteria"], [1, 2, 3, 4, 5, 6])
+
+    def test_verified_scheduled_clause_takes_priority_within_target(self):
+        bank = [{
+            "scenario_id": "housing",
+            "scenario": "What should our co-op fund?",
+            "target_criteria": [6, 7],
+            "relevance": {"oct-goodness": [1, 2, 3, 4, 5, 6]},
+        }]
+        [scenario] = response_scenarios(bank, target="oct-goodness")
+        self.assertEqual(scenario["verified_criteria"], [6, 1, 2, 3, 4, 5])

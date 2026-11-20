@@ -33,11 +33,13 @@ def response_scenarios(bank, target=""):
     for row in bank:
         relevance = row["relevance"]
         target_ids = set(relevance.get(target, []))
+        scheduled_ids = target_ids.intersection(row.get("target_criteria") or ())
         verified_ids = {key for ids in relevance.values() for key in ids}
+        verified_order = sorted(scheduled_ids) + sorted(target_ids - scheduled_ids) + sorted(verified_ids - target_ids)
         rows.append({
             "scenario_id": row["scenario_id"],
             "scenario": row["scenario"],
-            "verified_criteria": sorted(target_ids) + sorted(verified_ids - target_ids),
+            "verified_criteria": verified_order,
             "scenario_type": row.get("scenario_type"),
         })
     return rows
