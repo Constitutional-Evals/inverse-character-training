@@ -117,9 +117,15 @@ def validate_plan(text, verified, n_criteria):
             for c, a in zip(ids, anchors)]
 
 
+def anchored_scenario_id(source_id):
+    if re.fullmatch(r"gen_\d+", source_id):
+        source_id = source_id.removeprefix("gen_")
+    return f"DA_{source_id}"
+
+
 def process(row, llm, args, criteria, clean):
     src = row["scenario_id"]
-    sid = "DA_" + (src.removeprefix("gen_") if re.fullmatch(r"gen_\d+", src) else src)
+    sid = anchored_scenario_id(src)
     scenario = clean.get(src, row["scenario"])
     verified = row.get("verified_criteria") or []
     text_of = {c["pilot_id"]: c["criterion"] for c in criteria}
@@ -189,6 +195,17 @@ def main():
     rows = read_jsonl(Path("outputs/scenarios") / args.source / "generated_scenarios_rich.jsonl")
     if args.limit:
         rows = rows[:args.limit]
+    source_by_id = {}
+    for row in rows:
+        source_id = row["scenario_id"]
+        scenario_id = anchored_scenario_id(source_id)
+        if scenario_id in source_by_id:
+            ap.error(
+                f"Source scenario IDs {source_by_id[scenario_id]!r} and {source_id!r} "
+                f"both map to {scenario_id!r}. Make the source scenario IDs unambiguous."
+            )
+        source_by_id[scenario_id] = source_id
+
     clean = {}
     if args.clean_from:
         clean_path = Path("outputs/responses") / args.clean_from / "responses.jsonl"
