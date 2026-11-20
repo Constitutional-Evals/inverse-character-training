@@ -182,14 +182,21 @@ def validate_check(text: str, letters: list[str]) -> dict:
     return {"ratings": ratings, "obvious_best": best, "duplicates": dups, "value_language": vl, "note": str(obj.get("note", ""))}
 
 
-def run_checks(llm, args, scenario, committed, sid, round_tag, *, system_message=None) -> list[dict]:
-    """Leading check in --check-orders orders (a seeded shuffle, then its reverse)."""
+def reply_orders(committed, sid, count):
+    """Yield the seeded shuffle and its reverse with stable reply IDs and model-facing labels."""
     base = list(range(len(committed)))
     random.Random(sid).shuffle(base)
-    results = []
-    for o, order in enumerate([base, base[::-1]][:args.check_orders]):
+    for order in [base, base[::-1]][:count]:
         letters = [chr(65 + j) for j in range(len(order))]
         replies = "\n\n".join(f"=== Reply {L} ===\n{committed[i]['text']}" for L, i in zip(letters, order))
+        yield dict(zip(letters, [committed[i]["response_id"] for i in order])), replies
+
+
+def run_checks(llm, args, scenario, committed, sid, round_tag, *, system_message=None) -> list[dict]:
+    """Leading check in --check-orders orders (a seeded shuffle, then its reverse)."""
+    results = []
+    for o, (to_id, replies) in enumerate(reply_orders(committed, sid, args.check_orders)):
+        letters = list(to_id)
         prompt = CHECK_PROMPT.format(
             scenario=scenario, replies=replies, letters=", ".join(letters),
             rating_keys=", ".join(f'"{L}": <1-5>' for L in letters),
@@ -201,7 +208,6 @@ def run_checks(llm, args, scenario, committed, sid, round_tag, *, system_message
             args.checker_model, messages, temperature=0, max_tokens=3000,
             tag=f"{round_tag}:{sid}:{o}", validate=lambda t, letters=letters: validate_check(t, letters),
         )
-        to_id = {L: committed[i]["response_id"] for L, i in zip(letters, order)}
         results.append({
             "order": [to_id[L] for L in letters],
             "defensible": {to_id[L]: v for L, v in parsed["ratings"].items()},
