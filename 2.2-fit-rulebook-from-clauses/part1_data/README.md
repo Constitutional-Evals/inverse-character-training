@@ -68,7 +68,8 @@ is a candidate limit. The number of selected scenarios depends on quality and co
 To import a labeled export from the same criterion pool without API calls, use
 `python pipeline/run_scenarios.py --run-name imported --benchmark /path/to/benchmark.json`.
 An export ZIP works too. Add `--target oct-goodness` when importing to give verified
-Goodness criteria first claim on the reply menu. Use a separate run name for a different input pool.
+Goodness criteria first claim on the reply menu. Use a new run name for a different
+benchmark, target, or criterion pool, or when switching between import and generation.
 
 ## Stage 3: anchored responses
 ```

@@ -5,6 +5,8 @@ import sys
 from pathlib import Path
 from tempfile import TemporaryDirectory
 
+from filelock import FileLock, Timeout
+
 from common import read_jsonl, write_jsonl
 
 
@@ -63,11 +65,28 @@ def main():
         parser.error("Initialize Anand's pinned checkout with git submodule update --init.")
 
     sys.path.insert(0, str(ANAND_PIPELINE))
-    from modules import config as cfg
-    from modules.core import atomic_json, initialize_workspace, load_constitutions, load_existing_bank, read_json, slug
-
     root = args.output_root / args.run_name
+    root.mkdir(parents=True, exist_ok=True)
+    try:
+        with FileLock(str(root / ".scenario-run.lock"), timeout=0):
+            run_scenarios(args, parser, root)
+    except Timeout:
+        parser.error("This scenario run is already in progress.")
+
+
+def run_scenarios(args, parser, root):
+    from modules import config as cfg
+    from modules.core import atomic_json, digest, initialize_workspace, load_constitutions, load_existing_bank, read_json, slug
+
     pool_path = root / "pilot_constitutions.json"
+    path = root / "generated_scenarios_rich.jsonl"
+    import_manifest = root / "benchmark_import.json"
+    has_generation_state = (root / "run_manifest.json").exists() or (root / "inputs").exists()
+    if args.benchmark and has_generation_state:
+        parser.error("This run name is already used for generation. Import under a new run name.")
+    if not args.benchmark and (import_manifest.exists() or (path.exists() and not has_generation_state)):
+        parser.error("This run name is already used for benchmark import. Generate under a new run name.")
+
     pool = pilot_constitutions(args.criteria)
     target = slug(args.target)
     group_ids = sorted(slug(name) for name in pool["constitutions"])
@@ -75,17 +94,36 @@ def main():
         parser.error(f"Unknown target constitution {args.target!r}. Available IDs: {', '.join(group_ids)}")
     if pool_path.exists() and read_json(pool_path) != pool:
         parser.error("The criteria differ from this run's saved pool. Use a new run name.")
-    atomic_json(pool_path, pool)
     if args.benchmark:
-        const = load_constitutions(pool_path)
+        # Validate the incoming pool and benchmark before writing either into the run.
+        with TemporaryDirectory(dir=root) as directory:
+            proposed_pool = Path(directory) / pool_path.name
+            atomic_json(proposed_pool, pool)
+            const = load_constitutions(proposed_pool)
         bank = load_existing_bank(args.benchmark, const)
         if not bank or any(set(row["relevance"]) != set(const) for row in bank):
             parser.error("--benchmark requires a benchmark export with criterion relevance labels")
+        rows = response_scenarios(bank, target)
+        identity = digest({"criteria": pool, "benchmark": bank, "target": target})
+        saved_import = read_json(import_manifest)
+        if saved_import is not None and saved_import["identity"] != identity:
+            parser.error("The benchmark or target differs from this run's saved import. Use a new run name.")
+        if saved_import is None and path.exists():
+            if not pool_path.exists() or read_jsonl(path) != rows:
+                parser.error("The benchmark or pool does not match this run's existing import. Use a new run name.")
+        if not pool_path.exists():
+            atomic_json(pool_path, pool)
+        if saved_import is None:
+            atomic_json(import_manifest, {
+                "identity": identity, "target_constitution": target, "scenario_count": len(rows),
+            })
     else:
         from modules.client import OpenRouterClient, obtain_openrouter_key
         from modules.pipeline import run_pipeline
         from modules.stages import show_coverage
 
+        if not pool_path.exists():
+            atomic_json(pool_path, pool)
         cfg.CONSTITUTION_INPUT = str(pool_path)
         cfg.TARGET_CONSTITUTION = target
         cfg.EXISTING_BANK_INPUT = str(args.existing) if args.existing else ""
@@ -103,10 +141,8 @@ def main():
         root, const, existing = initialize_workspace()
         results = run_pipeline(root, const, existing, OpenRouterClient(root, obtain_openrouter_key()))
         show_coverage(results["report"])
-        bank = results["existing"] + results["selected"]
+        rows = response_scenarios(results["existing"] + results["selected"], target)
 
-    rows = response_scenarios(bank, target)
-    path = root / "generated_scenarios_rich.jsonl"
     with TemporaryDirectory(dir=root) as directory:
         temporary = Path(directory) / path.name
         write_jsonl(temporary, rows)
